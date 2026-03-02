@@ -120,7 +120,7 @@ export async function startTelegramWebhook(opts: {
   });
 
   if (diagnosticsEnabled) {
-    startDiagnosticHeartbeat(opts.config);
+    startDiagnosticHeartbeat();
   }
 
   const server = createServer((req, res) => {

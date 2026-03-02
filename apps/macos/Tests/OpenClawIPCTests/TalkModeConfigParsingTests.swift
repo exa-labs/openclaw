@@ -1,5 +1,6 @@
 import OpenClawProtocol
 import Testing
+
 @testable import OpenClaw
 
 @Suite struct TalkModeConfigParsingTests {

@@ -7,9 +7,9 @@ export function splitTrailingAuthProfile(raw: string): {
     return { model: "" };
   }
 
+  const profileDelimiter = trimmed.lastIndexOf("@");
   const lastSlash = trimmed.lastIndexOf("/");
-  const profileDelimiter = trimmed.indexOf("@", lastSlash + 1);
-  if (profileDelimiter <= 0) {
+  if (profileDelimiter <= 0 || profileDelimiter <= lastSlash) {
     return { model: trimmed };
   }
 

@@ -129,11 +129,6 @@ export {
   resolveWebhookTargets,
 } from "./webhook-targets.js";
 export type { WebhookTargetMatchResult } from "./webhook-targets.js";
-export {
-  applyBasicWebhookRequestGuards,
-  isJsonContentType,
-  readJsonWebhookBodyOrReject,
-} from "./webhook-request-guards.js";
 export type { AgentMediaPayload } from "./agent-media-payload.js";
 export { buildAgentMediaPayload } from "./agent-media-payload.js";
 export {
@@ -234,8 +229,6 @@ export {
   sendMediaWithLeadingCaption,
 } from "./reply-payload.js";
 export type { OutboundReplyPayload } from "./reply-payload.js";
-export type { OutboundMediaLoadOptions } from "./outbound-media.js";
-export { loadOutboundMediaFromUrl } from "./outbound-media.js";
 export { resolveChannelAccountConfigBasePath } from "./config-paths.js";
 export { buildMediaPayload } from "../channels/plugins/media-payload.js";
 export type { MediaPayload, MediaPayloadInput } from "../channels/plugins/media-payload.js";
@@ -243,22 +236,6 @@ export { createLoggerBackedRuntime } from "./runtime.js";
 export { chunkTextForOutbound } from "./text-chunking.js";
 export { readJsonFileWithFallback, writeJsonFileAtomically } from "./json-store.js";
 export { buildRandomTempFilePath, withTempDownloadPath } from "./temp-path.js";
-export {
-  applyWindowsSpawnProgramPolicy,
-  materializeWindowsSpawnProgram,
-  resolveWindowsExecutablePath,
-  resolveWindowsSpawnProgramCandidate,
-  resolveWindowsSpawnProgram,
-} from "./windows-spawn.js";
-export type {
-  ResolveWindowsSpawnProgramCandidateParams,
-  ResolveWindowsSpawnProgramParams,
-  WindowsSpawnCandidateResolution,
-  WindowsSpawnInvocation,
-  WindowsSpawnProgramCandidate,
-  WindowsSpawnProgram,
-  WindowsSpawnResolution,
-} from "./windows-spawn.js";
 export { resolvePreferredOpenClawTmpDir } from "../infra/tmp-openclaw-dir.js";
 export {
   runPluginCommandWithTimeout,
@@ -309,19 +286,6 @@ export {
   readRequestBodyWithLimit,
   requestBodyErrorToText,
 } from "../infra/http-body.js";
-export {
-  WEBHOOK_ANOMALY_COUNTER_DEFAULTS,
-  WEBHOOK_ANOMALY_STATUS_CODES,
-  WEBHOOK_RATE_LIMIT_DEFAULTS,
-  createBoundedCounter,
-  createFixedWindowRateLimiter,
-  createWebhookAnomalyTracker,
-} from "./webhook-memory-guards.js";
-export type {
-  BoundedCounter,
-  FixedWindowRateLimiter,
-  WebhookAnomalyTracker,
-} from "./webhook-memory-guards.js";
 
 export { fetchWithSsrFGuard } from "../infra/net/fetch-guard.js";
 export {

@@ -74,8 +74,6 @@ export type DiscordThreadCreate = {
   content?: string;
   /** Discord thread type (default: PublicThread for standalone threads). */
   type?: number;
-  /** Tag IDs to apply when creating a forum/media thread (Discord `applied_tags`). */
-  appliedTags?: string[];
 };
 
 export type DiscordThreadList = {

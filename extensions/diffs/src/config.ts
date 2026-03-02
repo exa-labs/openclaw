@@ -1,10 +1,8 @@
 import type { OpenClawPluginConfigSchema } from "openclaw/plugin-sdk";
 import {
-  DIFF_INDICATORS,
   DIFF_LAYOUTS,
   DIFF_MODES,
   DIFF_THEMES,
-  type DiffIndicators,
   type DiffLayout,
   type DiffMode,
   type DiffPresentationDefaults,
@@ -16,10 +14,7 @@ type DiffsPluginConfig = {
   defaults?: {
     fontFamily?: string;
     fontSize?: number;
-    lineSpacing?: number;
     layout?: DiffLayout;
-    showLineNumbers?: boolean;
-    diffIndicators?: DiffIndicators;
     wordWrap?: boolean;
     background?: boolean;
     theme?: DiffTheme;
@@ -30,10 +25,7 @@ type DiffsPluginConfig = {
 export const DEFAULT_DIFFS_TOOL_DEFAULTS: DiffToolDefaults = {
   fontFamily: "Fira Code",
   fontSize: 15,
-  lineSpacing: 1.6,
   layout: "unified",
-  showLineNumbers: true,
-  diffIndicators: "bars",
   wordWrap: true,
   background: true,
   theme: "dark",
@@ -55,25 +47,10 @@ const DIFFS_PLUGIN_CONFIG_JSON_SCHEMA = {
           maximum: 24,
           default: DEFAULT_DIFFS_TOOL_DEFAULTS.fontSize,
         },
-        lineSpacing: {
-          type: "number",
-          minimum: 1,
-          maximum: 3,
-          default: DEFAULT_DIFFS_TOOL_DEFAULTS.lineSpacing,
-        },
         layout: {
           type: "string",
           enum: [...DIFF_LAYOUTS],
           default: DEFAULT_DIFFS_TOOL_DEFAULTS.layout,
-        },
-        showLineNumbers: {
-          type: "boolean",
-          default: DEFAULT_DIFFS_TOOL_DEFAULTS.showLineNumbers,
-        },
-        diffIndicators: {
-          type: "string",
-          enum: [...DIFF_INDICATORS],
-          default: DEFAULT_DIFFS_TOOL_DEFAULTS.diffIndicators,
         },
         wordWrap: { type: "boolean", default: DEFAULT_DIFFS_TOOL_DEFAULTS.wordWrap },
         background: { type: "boolean", default: DEFAULT_DIFFS_TOOL_DEFAULTS.background },
@@ -124,10 +101,7 @@ export function resolveDiffsPluginDefaults(config: unknown): DiffToolDefaults {
   return {
     fontFamily: normalizeFontFamily(defaults.fontFamily),
     fontSize: normalizeFontSize(defaults.fontSize),
-    lineSpacing: normalizeLineSpacing(defaults.lineSpacing),
     layout: normalizeLayout(defaults.layout),
-    showLineNumbers: defaults.showLineNumbers !== false,
-    diffIndicators: normalizeDiffIndicators(defaults.diffIndicators),
     wordWrap: defaults.wordWrap !== false,
     background: defaults.background !== false,
     theme: normalizeTheme(defaults.theme),
@@ -136,24 +110,11 @@ export function resolveDiffsPluginDefaults(config: unknown): DiffToolDefaults {
 }
 
 export function toPresentationDefaults(defaults: DiffToolDefaults): DiffPresentationDefaults {
-  const {
-    fontFamily,
-    fontSize,
-    lineSpacing,
-    layout,
-    showLineNumbers,
-    diffIndicators,
-    wordWrap,
-    background,
-    theme,
-  } = defaults;
+  const { fontFamily, fontSize, layout, wordWrap, background, theme } = defaults;
   return {
     fontFamily,
     fontSize,
-    lineSpacing,
     layout,
-    showLineNumbers,
-    diffIndicators,
     wordWrap,
     background,
     theme,
@@ -173,21 +134,8 @@ function normalizeFontSize(fontSize?: number): number {
   return Math.min(Math.max(rounded, 10), 24);
 }
 
-function normalizeLineSpacing(lineSpacing?: number): number {
-  if (lineSpacing === undefined || !Number.isFinite(lineSpacing)) {
-    return DEFAULT_DIFFS_TOOL_DEFAULTS.lineSpacing;
-  }
-  return Math.min(Math.max(lineSpacing, 1), 3);
-}
-
 function normalizeLayout(layout?: DiffLayout): DiffLayout {
   return layout && DIFF_LAYOUTS.includes(layout) ? layout : DEFAULT_DIFFS_TOOL_DEFAULTS.layout;
-}
-
-function normalizeDiffIndicators(diffIndicators?: DiffIndicators): DiffIndicators {
-  return diffIndicators && DIFF_INDICATORS.includes(diffIndicators)
-    ? diffIndicators
-    : DEFAULT_DIFFS_TOOL_DEFAULTS.diffIndicators;
 }
 
 function normalizeTheme(theme?: DiffTheme): DiffTheme {

@@ -5,9 +5,7 @@ import {
 } from "../commands/onboard-helpers.js";
 import type { GatewayAuthChoice } from "../commands/onboard-types.js";
 import type { GatewayBindMode, GatewayTailscaleMode, OpenClawConfig } from "../config/config.js";
-import { ensureControlUiAllowedOriginsForNonLoopbackBind } from "../config/gateway-control-ui-origins.js";
 import {
-  maybeAddTailnetOriginToControlUiAllowedOrigins,
   TAILSCALE_DOCS_LINES,
   TAILSCALE_EXPOSURE_OPTIONS,
   TAILSCALE_MISSING_BIN_NOTE_LINES,
@@ -50,6 +48,21 @@ type ConfigureGatewayResult = {
   nextConfig: OpenClawConfig;
   settings: GatewayWizardSettings;
 };
+
+function buildDefaultControlUiAllowedOrigins(params: {
+  port: number;
+  bind: GatewayWizardSettings["bind"];
+  customBindHost?: string;
+}): string[] {
+  const origins = new Set<string>([
+    `http://localhost:${params.port}`,
+    `http://127.0.0.1:${params.port}`,
+  ]);
+  if (params.bind === "custom" && params.customBindHost) {
+    origins.add(`http://${params.customBindHost}:${params.port}`);
+  }
+  return [...origins];
+}
 
 export async function configureGatewayForOnboarding(
   opts: ConfigureGatewayOptions,
@@ -124,10 +137,8 @@ export async function configureGatewayForOnboarding(
         });
 
   // Detect Tailscale binary before proceeding with serve/funnel setup.
-  // Persist the path so getTailnetHostname can reuse it for origin injection.
-  let tailscaleBin: string | null = null;
   if (tailscaleMode !== "off") {
-    tailscaleBin = await findTailscaleBinary();
+    const tailscaleBin = await findTailscaleBinary();
     if (!tailscaleBin) {
       await prompter.note(TAILSCALE_MISSING_BIN_NOTE_LINES.join("\n"), "Tailscale Warning");
     }
@@ -161,18 +172,12 @@ export async function configureGatewayForOnboarding(
   let gatewayToken: string | undefined;
   if (authMode === "token") {
     if (flow === "quickstart") {
-      gatewayToken =
-        (quickstartGateway.token ??
-          normalizeGatewayTokenInput(process.env.OPENCLAW_GATEWAY_TOKEN)) ||
-        randomToken();
+      gatewayToken = quickstartGateway.token ?? randomToken();
     } else {
       const tokenInput = await prompter.text({
         message: "Gateway token (blank to generate)",
         placeholder: "Needed for multi-machine or non-loopback access",
-        initialValue:
-          quickstartGateway.token ??
-          normalizeGatewayTokenInput(process.env.OPENCLAW_GATEWAY_TOKEN) ??
-          "",
+        initialValue: quickstartGateway.token ?? "",
       });
       gatewayToken = normalizeGatewayTokenInput(tokenInput) || randomToken();
     }
@@ -226,14 +231,27 @@ export async function configureGatewayForOnboarding(
     },
   };
 
-  nextConfig = ensureControlUiAllowedOriginsForNonLoopbackBind(nextConfig, {
-    requireControlUiEnabled: true,
-  }).config;
-  nextConfig = await maybeAddTailnetOriginToControlUiAllowedOrigins({
-    config: nextConfig,
-    tailscaleMode,
-    tailscaleBin,
-  });
+  const controlUiEnabled = nextConfig.gateway?.controlUi?.enabled ?? true;
+  const hasExplicitControlUiAllowedOrigins =
+    (nextConfig.gateway?.controlUi?.allowedOrigins ?? []).some(
+      (origin) => origin.trim().length > 0,
+    ) || nextConfig.gateway?.controlUi?.dangerouslyAllowHostHeaderOriginFallback === true;
+  if (controlUiEnabled && bind !== "loopback" && !hasExplicitControlUiAllowedOrigins) {
+    nextConfig = {
+      ...nextConfig,
+      gateway: {
+        ...nextConfig.gateway,
+        controlUi: {
+          ...nextConfig.gateway?.controlUi,
+          allowedOrigins: buildDefaultControlUiAllowedOrigins({
+            port,
+            bind,
+            customBindHost,
+          }),
+        },
+      },
+    };
+  }
 
   // If this is a new gateway setup (no existing gateway settings), start with a
   // denylist for high-risk node commands. Users can arm these temporarily via

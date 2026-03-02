@@ -2,11 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { PluginLogger } from "openclaw/plugin-sdk";
 import { ACPX_PINNED_VERSION, ACPX_PLUGIN_ROOT, buildAcpxLocalInstallCommand } from "./config.js";
-import {
-  resolveSpawnFailure,
-  type SpawnCommandOptions,
-  spawnAndCollect,
-} from "./runtime-internals/process.js";
+import { resolveSpawnFailure, spawnAndCollect } from "./runtime-internals/process.js";
 
 const SEMVER_PATTERN = /\b\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\b/;
 
@@ -80,32 +76,17 @@ export async function checkAcpxVersion(params: {
   command: string;
   cwd?: string;
   expectedVersion?: string;
-  spawnOptions?: SpawnCommandOptions;
 }): Promise<AcpxVersionCheckResult> {
   const expectedVersion = params.expectedVersion?.trim() || undefined;
   const installCommand = buildAcpxLocalInstallCommand(expectedVersion ?? ACPX_PINNED_VERSION);
   const cwd = params.cwd ?? ACPX_PLUGIN_ROOT;
   const hasExpectedVersion = isExpectedVersionConfigured(expectedVersion);
   const probeArgs = hasExpectedVersion ? ["--version"] : ["--help"];
-  const spawnParams = {
+  const result = await spawnAndCollect({
     command: params.command,
     args: probeArgs,
     cwd,
-  };
-  let result: Awaited<ReturnType<typeof spawnAndCollect>>;
-  try {
-    result = params.spawnOptions
-      ? await spawnAndCollect(spawnParams, params.spawnOptions)
-      : await spawnAndCollect(spawnParams);
-  } catch (error) {
-    return {
-      ok: false,
-      reason: "execution-failed",
-      message: error instanceof Error ? error.message : String(error),
-      expectedVersion,
-      installCommand,
-    };
-  }
+  });
 
   if (result.error) {
     const spawnFailure = resolveSpawnFailure(result.error, cwd);
@@ -205,7 +186,6 @@ export async function ensureAcpx(params: {
   pluginRoot?: string;
   expectedVersion?: string;
   allowInstall?: boolean;
-  spawnOptions?: SpawnCommandOptions;
 }): Promise<void> {
   if (pendingEnsure) {
     return await pendingEnsure;
@@ -221,7 +201,6 @@ export async function ensureAcpx(params: {
       command: params.command,
       cwd: pluginRoot,
       expectedVersion,
-      spawnOptions: params.spawnOptions,
     });
     if (precheck.ok) {
       return;
@@ -259,7 +238,6 @@ export async function ensureAcpx(params: {
       command: params.command,
       cwd: pluginRoot,
       expectedVersion,
-      spawnOptions: params.spawnOptions,
     });
 
     if (!postcheck.ok) {

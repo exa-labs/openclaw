@@ -11,7 +11,8 @@ export type ExecHost = "sandbox" | "gateway" | "node";
 export type ExecSecurity = "deny" | "allowlist" | "full";
 export type ExecAsk = "off" | "on-miss" | "always";
 
-export type SystemRunApprovalBinding = {
+export type SystemRunApprovalBindingV1 = {
+  version: 1;
   argv: string[];
   cwd: string | null;
   agentId: string | null;
@@ -19,7 +20,8 @@ export type SystemRunApprovalBinding = {
   envHash: string | null;
 };
 
-export type SystemRunApprovalPlan = {
+export type SystemRunApprovalPlanV2 = {
+  version: 2;
   argv: string[];
   cwd: string | null;
   rawCommand: string | null;
@@ -32,8 +34,8 @@ export type ExecApprovalRequestPayload = {
   commandArgv?: string[];
   // Optional UI-safe env key preview for approval prompts.
   envKeys?: string[];
-  systemRunBinding?: SystemRunApprovalBinding | null;
-  systemRunPlan?: SystemRunApprovalPlan | null;
+  systemRunBindingV1?: SystemRunApprovalBindingV1 | null;
+  systemRunPlanV2?: SystemRunApprovalPlanV2 | null;
   cwd?: string | null;
   nodeId?: string | null;
   host?: string | null;

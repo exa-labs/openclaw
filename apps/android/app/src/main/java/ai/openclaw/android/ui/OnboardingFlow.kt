@@ -80,7 +80,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -243,7 +242,7 @@ fun OnboardingFlow(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     remember(context) {
       hasMotionCapabilities(context)
     }
-  val motionPermissionRequired = true
+  val motionPermissionRequired = Build.VERSION.SDK_INT >= 29
   val notificationsPermissionRequired = Build.VERSION.SDK_INT >= 33
   val discoveryPermission =
     if (Build.VERSION.SDK_INT >= 33) {
@@ -1636,6 +1635,7 @@ private fun isNotificationListenerEnabled(context: Context): Boolean {
 }
 
 private fun canInstallUnknownApps(context: Context): Boolean {
+  if (Build.VERSION.SDK_INT < 26) return true
   return context.packageManager.canRequestPackageInstalls()
 }
 
@@ -1649,10 +1649,11 @@ private fun openNotificationListenerSettings(context: Context) {
 }
 
 private fun openUnknownAppSourcesSettings(context: Context) {
+  if (Build.VERSION.SDK_INT < 26) return
   val intent =
     Intent(
       Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-      "package:${context.packageName}".toUri(),
+      Uri.parse("package:${context.packageName}"),
     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
   runCatching {
     context.startActivity(intent)

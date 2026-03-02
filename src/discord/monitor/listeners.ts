@@ -54,7 +54,6 @@ type DiscordReactionListenerParams = {
   allowNameMatching: boolean;
   guildEntries?: Record<string, import("./allow-list.js").DiscordGuildEntryResolved>;
   logger: Logger;
-  onEvent?: () => void;
 };
 
 const DISCORD_SLOW_LISTENER_THRESHOLD_MS = 30_000;
@@ -124,13 +123,11 @@ export class DiscordMessageListener extends MessageCreateListener {
   constructor(
     private handler: DiscordMessageHandler,
     private logger?: Logger,
-    private onEvent?: () => void,
   ) {
     super();
   }
 
   async handle(data: DiscordMessageEvent, client: Client) {
-    this.onEvent?.();
     // Release Carbon's dispatch lane immediately, but keep our message handler
     // serialized to avoid unbounded parallel model/IO work on traffic bursts.
     this.messageQueue = this.messageQueue
@@ -160,7 +157,6 @@ export class DiscordReactionListener extends MessageReactionAddListener {
   }
 
   async handle(data: DiscordReactionEvent, client: Client) {
-    this.params.onEvent?.();
     await runDiscordReactionHandler({
       data,
       client,
@@ -178,7 +174,6 @@ export class DiscordReactionRemoveListener extends MessageReactionRemoveListener
   }
 
   async handle(data: DiscordReactionEvent, client: Client) {
-    this.params.onEvent?.();
     await runDiscordReactionHandler({
       data,
       client,

@@ -80,20 +80,15 @@ function detectContentType(buffer: Buffer): string {
     ) {
       return "image/webp";
     }
-    // MPEG-4 container (ftyp box) — distinguish audio (M4A) from video (MP4)
-    // by checking the major brand at bytes 8-11.
-    if (
-      buffer.length >= 12 &&
-      buffer[4] === 0x66 &&
-      buffer[5] === 0x74 &&
-      buffer[6] === 0x79 &&
-      buffer[7] === 0x70
-    ) {
-      const brand = String.fromCharCode(buffer[8], buffer[9], buffer[10], buffer[11]);
-      if (brand === "M4A " || brand === "M4B ") {
+    // MP4
+    if (buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
+      return "video/mp4";
+    }
+    // M4A/AAC
+    if (buffer[0] === 0x00 && buffer[1] === 0x00 && buffer[2] === 0x00) {
+      if (buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
         return "audio/mp4";
       }
-      return "video/mp4";
     }
   }
 

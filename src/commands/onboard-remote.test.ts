@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpenClawConfig } from "../config/config.js";
 import type { GatewayBonjourBeacon } from "../infra/bonjour-discovery.js";
-import { captureEnv } from "../test-utils/env.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 import { createWizardPrompter } from "./test-wizard-helpers.js";
 
@@ -28,11 +27,8 @@ function createPrompter(overrides: Partial<WizardPrompter>): WizardPrompter {
 }
 
 describe("promptRemoteGatewayConfig", () => {
-  const envSnapshot = captureEnv(["OPENCLAW_ALLOW_INSECURE_PRIVATE_WS"]);
-
   beforeEach(() => {
     vi.clearAllMocks();
-    envSnapshot.restore();
     detectBinary.mockResolvedValue(false);
     discoverGatewayBeacons.mockResolvedValue([]);
     resolveWideAreaDiscoveryDomain.mockReturnValue(undefined);
@@ -92,12 +88,9 @@ describe("promptRemoteGatewayConfig", () => {
     );
   });
 
-  it("validates insecure ws:// remote URLs and allows only loopback ws:// by default", async () => {
+  it("validates insecure ws:// remote URLs and allows loopback ws://", async () => {
     const text: WizardPrompter["text"] = vi.fn(async (params) => {
       if (params.message === "Gateway WebSocket URL") {
-        // ws:// to public IPs is rejected
-        expect(params.validate?.("ws://203.0.113.10:18789")).toContain("Use wss://");
-        // ws:// to private IPs remains blocked by default
         expect(params.validate?.("ws://10.0.0.8:18789")).toContain("Use wss://");
         expect(params.validate?.("ws://127.0.0.1:18789")).toBeUndefined();
         expect(params.validate?.("wss://remote.example.com:18789")).toBeUndefined();
@@ -125,35 +118,5 @@ describe("promptRemoteGatewayConfig", () => {
     expect(next.gateway?.mode).toBe("remote");
     expect(next.gateway?.remote?.url).toBe("wss://remote.example.com:18789");
     expect(next.gateway?.remote?.token).toBeUndefined();
-  });
-
-  it("allows private ws:// only when OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1", async () => {
-    process.env.OPENCLAW_ALLOW_INSECURE_PRIVATE_WS = "1";
-
-    const text: WizardPrompter["text"] = vi.fn(async (params) => {
-      if (params.message === "Gateway WebSocket URL") {
-        expect(params.validate?.("ws://10.0.0.8:18789")).toBeUndefined();
-        return "ws://10.0.0.8:18789";
-      }
-      return "";
-    }) as WizardPrompter["text"];
-
-    const select: WizardPrompter["select"] = vi.fn(async (params) => {
-      if (params.message === "Gateway auth") {
-        return "off" as never;
-      }
-      return (params.options[0]?.value ?? "") as never;
-    });
-
-    const cfg = {} as OpenClawConfig;
-    const prompter = createPrompter({
-      confirm: vi.fn(async () => false),
-      select,
-      text,
-    });
-
-    const next = await promptRemoteGatewayConfig(cfg, prompter);
-
-    expect(next.gateway?.remote?.url).toBe("ws://10.0.0.8:18789");
   });
 });

@@ -2,6 +2,7 @@ import AppKit
 import OpenClawProtocol
 import SwiftUI
 import Testing
+
 @testable import OpenClaw
 
 @Suite(.serialized)

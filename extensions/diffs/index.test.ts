@@ -70,9 +70,6 @@ describe("diffs plugin registration", () => {
           theme: "light",
           background: false,
           layout: "split",
-          showLineNumbers: false,
-          diffIndicators: "classic",
-          lineSpacing: 2,
         },
       },
       runtime: {} as never,
@@ -122,8 +119,5 @@ describe("diffs plugin registration", () => {
     expect(String(res.body)).toContain('body data-theme="light"');
     expect(String(res.body)).toContain('"backgroundEnabled":false');
     expect(String(res.body)).toContain('"diffStyle":"split"');
-    expect(String(res.body)).toContain('"disableLineNumbers":true');
-    expect(String(res.body)).toContain('"diffIndicators":"classic"');
-    expect(String(res.body)).toContain("--diffs-line-height: 30px;");
   });
 });

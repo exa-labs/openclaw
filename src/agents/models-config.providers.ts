@@ -496,13 +496,6 @@ export function normalizeProviders(params: {
 
   for (const [key, provider] of Object.entries(providers)) {
     const normalizedKey = key.trim();
-    if (!normalizedKey) {
-      mutated = true;
-      continue;
-    }
-    if (normalizedKey !== key) {
-      mutated = true;
-    }
     let normalizedProvider = provider;
     const configuredApiKey = normalizedProvider.apiKey;
 
@@ -561,19 +554,7 @@ export function normalizeProviders(params: {
       normalizedProvider = antigravityNormalized;
     }
 
-    const existing = next[normalizedKey];
-    if (existing) {
-      // Keep deterministic behavior if users accidentally define duplicate
-      // provider keys that only differ by surrounding whitespace.
-      mutated = true;
-      next[normalizedKey] = {
-        ...existing,
-        ...normalizedProvider,
-        models: normalizedProvider.models ?? existing.models,
-      };
-      continue;
-    }
-    next[normalizedKey] = normalizedProvider;
+    next[key] = normalizedProvider;
   }
 
   return mutated ? next : providers;

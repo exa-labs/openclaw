@@ -359,7 +359,6 @@ class CameraCaptureManager(private val context: Context) {
       .build()
   }
 
-  @SuppressLint("UnsafeOptInUsageError")
   private fun cameraDeviceInfoOrNull(info: CameraInfo): CameraDeviceInfo? {
     val cameraId = cameraIdOrNull(info) ?: return null
     val lensFacing =
@@ -390,7 +389,6 @@ class CameraCaptureManager(private val context: Context) {
     )
   }
 
-  @SuppressLint("UnsafeOptInUsageError")
   private fun cameraIdOrNull(info: CameraInfo): String? =
     runCatching { Camera2CameraInfo.from(info).cameraId }.getOrNull()
 }

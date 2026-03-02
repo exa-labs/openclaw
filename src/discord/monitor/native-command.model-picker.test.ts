@@ -310,7 +310,7 @@ describe("Discord model picker interactions", () => {
       .mockResolvedValue();
     const dispatchSpy = vi
       .spyOn(dispatcherModule, "dispatchReplyWithDispatcher")
-      .mockResolvedValue({} as never);
+      .mockImplementation(() => new Promise(() => {}) as never);
     const withTimeoutSpy = vi
       .spyOn(timeoutModule, "withTimeout")
       .mockRejectedValue(new Error("timeout"));

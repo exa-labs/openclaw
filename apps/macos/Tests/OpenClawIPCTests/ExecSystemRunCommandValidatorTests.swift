@@ -26,10 +26,9 @@ struct ExecSystemRunCommandValidatorTests {
 
             if !entry.expected.valid {
                 switch result {
-                case let .ok(resolved):
-                    Issue
-                        .record("\(entry.name): expected invalid result, got displayCommand=\(resolved.displayCommand)")
-                case let .invalid(message):
+                case .ok(let resolved):
+                    Issue.record("\(entry.name): expected invalid result, got displayCommand=\(resolved.displayCommand)")
+                case .invalid(let message):
                     if let expected = entry.expected.errorContains {
                         #expect(
                             message.contains(expected),
@@ -40,11 +39,11 @@ struct ExecSystemRunCommandValidatorTests {
             }
 
             switch result {
-            case let .ok(resolved):
+            case .ok(let resolved):
                 #expect(
                     resolved.displayCommand == entry.expected.displayCommand,
                     "\(entry.name): unexpected display command")
-            case let .invalid(message):
+            case .invalid(let message):
                 Issue.record("\(entry.name): unexpected invalid result: \(message)")
             }
         }

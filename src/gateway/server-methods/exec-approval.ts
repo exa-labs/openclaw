@@ -3,7 +3,7 @@ import {
   DEFAULT_EXEC_APPROVAL_TIMEOUT_MS,
   type ExecApprovalDecision,
 } from "../../infra/exec-approvals.js";
-import { buildSystemRunApprovalBinding } from "../../infra/system-run-approval-binding.js";
+import { buildSystemRunApprovalBindingV1 } from "../../infra/system-run-approval-binding.js";
 import { resolveSystemRunApprovalRequestContext } from "../../infra/system-run-approval-context.js";
 import type { ExecApprovalManager } from "../exec-approval-manager.js";
 import {
@@ -48,7 +48,7 @@ export function createExecApprovalHandlers(
         commandArgv?: string[];
         env?: Record<string, string>;
         cwd?: string;
-        systemRunPlan?: unknown;
+        systemRunPlanV2?: unknown;
         nodeId?: string;
         host?: string;
         security?: string;
@@ -73,7 +73,7 @@ export function createExecApprovalHandlers(
         host,
         command: p.command,
         commandArgv: p.commandArgv,
-        systemRunPlan: p.systemRunPlan,
+        systemRunPlanV2: p.systemRunPlanV2,
         cwd: p.cwd,
         agentId: p.agentId,
         sessionKey: p.sessionKey,
@@ -91,14 +91,6 @@ export function createExecApprovalHandlers(
         );
         return;
       }
-      if (host === "node" && !approvalContext.plan) {
-        respond(
-          false,
-          undefined,
-          errorShape(ErrorCodes.INVALID_REQUEST, "systemRunPlan is required for host=node"),
-        );
-        return;
-      }
       if (
         host === "node" &&
         (!Array.isArray(effectiveCommandArgv) || effectiveCommandArgv.length === 0)
@@ -110,9 +102,9 @@ export function createExecApprovalHandlers(
         );
         return;
       }
-      const systemRunBinding =
+      const systemRunBindingV1 =
         host === "node"
-          ? buildSystemRunApprovalBinding({
+          ? buildSystemRunApprovalBindingV1({
               argv: effectiveCommandArgv,
               cwd: effectiveCwd,
               agentId: effectiveAgentId,
@@ -131,9 +123,9 @@ export function createExecApprovalHandlers(
       const request = {
         command: effectiveCommandText,
         commandArgv: effectiveCommandArgv,
-        envKeys: systemRunBinding?.envKeys?.length ? systemRunBinding.envKeys : undefined,
-        systemRunBinding: systemRunBinding?.binding ?? null,
-        systemRunPlan: approvalContext.plan,
+        envKeys: systemRunBindingV1?.envKeys?.length ? systemRunBindingV1.envKeys : undefined,
+        systemRunBindingV1: systemRunBindingV1?.binding ?? null,
+        systemRunPlanV2: approvalContext.planV2,
         cwd: effectiveCwd ?? null,
         nodeId: host === "node" ? nodeId : null,
         host: host || null,

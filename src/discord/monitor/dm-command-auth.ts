@@ -17,32 +17,6 @@ export type DiscordDmCommandAccess = {
   allowMatch: ReturnType<typeof resolveDiscordAllowListMatch> | { allowed: false };
 };
 
-function resolveSenderAllowMatch(params: {
-  allowEntries: string[];
-  sender: { id: string; name?: string; tag?: string };
-  allowNameMatching: boolean;
-}) {
-  const allowList = normalizeDiscordAllowList(params.allowEntries, DISCORD_ALLOW_LIST_PREFIXES);
-  return allowList
-    ? resolveDiscordAllowListMatch({
-        allowList,
-        candidate: params.sender,
-        allowNameMatching: params.allowNameMatching,
-      })
-    : ({ allowed: false } as const);
-}
-
-function resolveDmPolicyCommandAuthorization(params: {
-  dmPolicy: DiscordDmPolicy;
-  decision: DmGroupAccessDecision;
-  commandAuthorized: boolean;
-}) {
-  if (params.dmPolicy === "open" && params.decision === "allow") {
-    return true;
-  }
-  return params.commandAuthorized;
-}
-
 export async function resolveDiscordDmCommandAccess(params: {
   accountId: string;
   dmPolicy: DiscordDmPolicy;
@@ -66,19 +40,30 @@ export async function resolveDiscordDmCommandAccess(params: {
     allowFrom: params.configuredAllowFrom,
     groupAllowFrom: [],
     storeAllowFrom,
-    isSenderAllowed: (allowEntries) =>
-      resolveSenderAllowMatch({
-        allowEntries,
-        sender: params.sender,
-        allowNameMatching: params.allowNameMatching,
-      }).allowed,
+    isSenderAllowed: (allowEntries) => {
+      const allowList = normalizeDiscordAllowList(allowEntries, DISCORD_ALLOW_LIST_PREFIXES);
+      const allowMatch = allowList
+        ? resolveDiscordAllowListMatch({
+            allowList,
+            candidate: params.sender,
+            allowNameMatching: params.allowNameMatching,
+          })
+        : { allowed: false };
+      return allowMatch.allowed;
+    },
   });
 
-  const allowMatch = resolveSenderAllowMatch({
-    allowEntries: access.effectiveAllowFrom,
-    sender: params.sender,
-    allowNameMatching: params.allowNameMatching,
-  });
+  const commandAllowList = normalizeDiscordAllowList(
+    access.effectiveAllowFrom,
+    DISCORD_ALLOW_LIST_PREFIXES,
+  );
+  const allowMatch = commandAllowList
+    ? resolveDiscordAllowListMatch({
+        allowList: commandAllowList,
+        candidate: params.sender,
+        allowNameMatching: params.allowNameMatching,
+      })
+    : { allowed: false };
 
   const commandAuthorized = resolveCommandAuthorizedFromAuthorizers({
     useAccessGroups: params.useAccessGroups,
@@ -90,15 +75,13 @@ export async function resolveDiscordDmCommandAccess(params: {
     ],
     modeWhenAccessGroupsOff: "configured",
   });
+  const effectiveCommandAuthorized =
+    access.decision === "allow" && params.dmPolicy === "open" ? true : commandAuthorized;
 
   return {
     decision: access.decision,
     reason: access.reason,
-    commandAuthorized: resolveDmPolicyCommandAuthorization({
-      dmPolicy: params.dmPolicy,
-      decision: access.decision,
-      commandAuthorized,
-    }),
+    commandAuthorized: effectiveCommandAuthorized,
     allowMatch,
   };
 }

@@ -1,4 +1,4 @@
-import type { ExecAsk, ExecSecurity, SystemRunApprovalPlan } from "../infra/exec-approvals.js";
+import type { ExecAsk, ExecSecurity } from "../infra/exec-approvals.js";
 import {
   DEFAULT_APPROVAL_REQUEST_TIMEOUT_MS,
   DEFAULT_APPROVAL_TIMEOUT_MS,
@@ -9,7 +9,6 @@ export type RequestExecApprovalDecisionParams = {
   id: string;
   command: string;
   commandArgv?: string[];
-  systemRunPlan?: SystemRunApprovalPlan;
   env?: Record<string, string>;
   cwd: string;
   nodeId?: string;
@@ -29,7 +28,6 @@ type ExecApprovalRequestToolParams = {
   id: string;
   command: string;
   commandArgv?: string[];
-  systemRunPlan?: SystemRunApprovalPlan;
   env?: Record<string, string>;
   cwd: string;
   nodeId?: string;
@@ -54,7 +52,6 @@ function buildExecApprovalRequestToolParams(
     id: params.id,
     command: params.command,
     commandArgv: params.commandArgv,
-    systemRunPlan: params.systemRunPlan,
     env: params.env,
     cwd: params.cwd,
     nodeId: params.nodeId,
@@ -159,7 +156,6 @@ export async function requestExecApprovalDecisionForHost(params: {
   approvalId: string;
   command: string;
   commandArgv?: string[];
-  systemRunPlan?: SystemRunApprovalPlan;
   env?: Record<string, string>;
   workdir: string;
   host: "gateway" | "node";
@@ -178,7 +174,6 @@ export async function requestExecApprovalDecisionForHost(params: {
     id: params.approvalId,
     command: params.command,
     commandArgv: params.commandArgv,
-    systemRunPlan: params.systemRunPlan,
     env: params.env,
     cwd: params.workdir,
     nodeId: params.nodeId,
@@ -199,7 +194,6 @@ export async function registerExecApprovalRequestForHost(params: {
   approvalId: string;
   command: string;
   commandArgv?: string[];
-  systemRunPlan?: SystemRunApprovalPlan;
   env?: Record<string, string>;
   workdir: string;
   host: "gateway" | "node";
@@ -218,7 +212,6 @@ export async function registerExecApprovalRequestForHost(params: {
     id: params.approvalId,
     command: params.command,
     commandArgv: params.commandArgv,
-    systemRunPlan: params.systemRunPlan,
     env: params.env,
     cwd: params.workdir,
     nodeId: params.nodeId,

@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { SystemRunApprovalPlan } from "../infra/exec-approvals.js";
-import { resolveCommandResolutionFromArgv } from "../infra/exec-command-resolution.js";
+import type { SystemRunApprovalPlanV2 } from "../infra/exec-approvals.js";
 import { sameFileIdentity } from "../infra/file-identity.js";
 import { resolveSystemRunCommand } from "../infra/system-run-command.js";
 
@@ -11,6 +10,22 @@ function normalizeString(value: unknown): string | null {
   }
   const trimmed = value.trim();
   return trimmed ? trimmed : null;
+}
+
+function isPathLikeExecutableToken(value: string): boolean {
+  if (!value) {
+    return false;
+  }
+  if (value.startsWith(".") || value.startsWith("/") || value.startsWith("\\")) {
+    return true;
+  }
+  if (value.includes("/") || value.includes("\\")) {
+    return true;
+  }
+  if (process.platform === "win32" && /^[a-zA-Z]:[\\/]/.test(value)) {
+    return true;
+  }
+  return false;
 }
 
 function pathComponentsFromRootSync(targetPath: string): string[] {
@@ -56,6 +71,7 @@ function hasMutableSymlinkPathComponentSync(targetPath: string): boolean {
 export function hardenApprovedExecutionPaths(params: {
   approvedByAsk: boolean;
   argv: string[];
+  shellCommand: string | null;
   cwd: string | undefined;
 }): { ok: true; argv: string[]; cwd: string | undefined } | { ok: false; message: string } {
   if (!params.approvedByAsk) {
@@ -111,31 +127,38 @@ export function hardenApprovedExecutionPaths(params: {
     hardenedCwd = cwdReal;
   }
 
-  if (params.argv.length === 0) {
+  if (params.shellCommand !== null || params.argv.length === 0) {
     return { ok: true, argv: params.argv, cwd: hardenedCwd };
   }
 
-  const resolution = resolveCommandResolutionFromArgv(params.argv, hardenedCwd);
-  const pinnedExecutable = resolution?.resolvedRealPath ?? resolution?.resolvedPath;
-  if (!pinnedExecutable) {
+  const argv = [...params.argv];
+  const rawExecutable = argv[0] ?? "";
+  if (!isPathLikeExecutableToken(rawExecutable)) {
+    return { ok: true, argv, cwd: hardenedCwd };
+  }
+
+  const base = hardenedCwd ?? process.cwd();
+  const candidate = path.isAbsolute(rawExecutable)
+    ? rawExecutable
+    : path.resolve(base, rawExecutable);
+  try {
+    argv[0] = fs.realpathSync(candidate);
+  } catch {
     return {
       ok: false,
       message: "SYSTEM_RUN_DENIED: approval requires a stable executable path",
     };
   }
-
-  const argv = [...params.argv];
-  argv[0] = pinnedExecutable;
   return { ok: true, argv, cwd: hardenedCwd };
 }
 
-export function buildSystemRunApprovalPlan(params: {
+export function buildSystemRunApprovalPlanV2(params: {
   command?: unknown;
   rawCommand?: unknown;
   cwd?: unknown;
   agentId?: unknown;
   sessionKey?: unknown;
-}): { ok: true; plan: SystemRunApprovalPlan; cmdText: string } | { ok: false; message: string } {
+}): { ok: true; plan: SystemRunApprovalPlanV2; cmdText: string } | { ok: false; message: string } {
   const command = resolveSystemRunCommand({
     command: params.command,
     rawCommand: params.rawCommand,
@@ -149,6 +172,7 @@ export function buildSystemRunApprovalPlan(params: {
   const hardening = hardenApprovedExecutionPaths({
     approvedByAsk: true,
     argv: command.argv,
+    shellCommand: command.shellCommand,
     cwd: normalizeString(params.cwd) ?? undefined,
   });
   if (!hardening.ok) {
@@ -157,6 +181,7 @@ export function buildSystemRunApprovalPlan(params: {
   return {
     ok: true,
     plan: {
+      version: 2,
       argv: hardening.argv,
       cwd: hardening.cwd ?? null,
       rawCommand: command.cmdText.trim() || null,

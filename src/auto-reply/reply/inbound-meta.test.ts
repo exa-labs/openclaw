@@ -25,7 +25,6 @@ describe("buildInboundMetaSystemPrompt", () => {
       MessageSidFull: "123",
       ReplyToId: "99",
       OriginatingTo: "telegram:5494292670",
-      AccountId: " work ",
       OriginatingChannel: "telegram",
       Provider: "telegram",
       Surface: "telegram",
@@ -35,7 +34,6 @@ describe("buildInboundMetaSystemPrompt", () => {
     const payload = parseInboundMetaPayload(prompt);
     expect(payload["schema"]).toBe("openclaw.inbound_meta.v1");
     expect(payload["chat_id"]).toBe("telegram:5494292670");
-    expect(payload["account_id"]).toBe("work");
     expect(payload["channel"]).toBe("telegram");
   });
 

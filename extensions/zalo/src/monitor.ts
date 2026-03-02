@@ -28,9 +28,6 @@ import {
   resolveZaloRuntimeGroupPolicy,
 } from "./group-access.js";
 import {
-  clearZaloWebhookSecurityStateForTest,
-  getZaloWebhookRateLimitStateSizeForTest,
-  getZaloWebhookStatusCounterSizeForTest,
   handleZaloWebhookRequest as handleZaloWebhookRequestInternal,
   registerZaloWebhookTarget as registerZaloWebhookTargetInternal,
   type ZaloWebhookTarget,
@@ -75,12 +72,6 @@ function logVerbose(core: ZaloCoreRuntime, runtime: ZaloRuntimeEnv, message: str
 export function registerZaloWebhookTarget(target: ZaloWebhookTarget): () => void {
   return registerZaloWebhookTargetInternal(target);
 }
-
-export {
-  clearZaloWebhookSecurityStateForTest,
-  getZaloWebhookRateLimitStateSizeForTest,
-  getZaloWebhookStatusCounterSizeForTest,
-};
 
 export async function handleZaloWebhookRequest(
   req: IncomingMessage,

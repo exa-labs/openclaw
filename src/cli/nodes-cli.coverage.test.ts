@@ -47,6 +47,7 @@ const callGateway = vi.fn(async (opts: NodeInvokeCall) => {
         payload: {
           cmdText: rawCommand ?? argv.join(" "),
           plan: {
+            version: 2,
             argv,
             cwd: typeof params.cwd === "string" ? params.cwd : null,
             rawCommand,
@@ -184,7 +185,8 @@ describe("nodes-cli coverage", () => {
     expect(invoke?.params?.timeoutMs).toBe(5000);
     const approval = getApprovalRequestCall();
     expect(approval?.params?.["commandArgv"]).toEqual(["echo", "hi"]);
-    expect(approval?.params?.["systemRunPlan"]).toEqual({
+    expect(approval?.params?.["systemRunPlanV2"]).toEqual({
+      version: 2,
       argv: ["echo", "hi"],
       cwd: "/tmp",
       rawCommand: null,
@@ -218,7 +220,8 @@ describe("nodes-cli coverage", () => {
     });
     const approval = getApprovalRequestCall();
     expect(approval?.params?.["commandArgv"]).toEqual(["/bin/sh", "-lc", "echo hi"]);
-    expect(approval?.params?.["systemRunPlan"]).toEqual({
+    expect(approval?.params?.["systemRunPlanV2"]).toEqual({
+      version: 2,
       argv: ["/bin/sh", "-lc", "echo hi"],
       cwd: null,
       rawCommand: "echo hi",

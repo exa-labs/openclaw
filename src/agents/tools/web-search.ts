@@ -6,8 +6,10 @@ import { wrapWebContent } from "../../security/external-content.js";
 import { normalizeSecretInput } from "../../utils/normalize-secret-input.js";
 import type { AnyAgentTool } from "./common.js";
 import { jsonResult, readNumberParam, readStringParam } from "./common.js";
-import { withTrustedWebToolsEndpoint } from "./web-guarded-fetch.js";
-import { resolveCitationRedirectUrl } from "./web-search-citation-redirect.js";
+import {
+  WEB_TOOLS_TRUSTED_NETWORK_SSRF_POLICY,
+  withWebToolsNetworkGuard,
+} from "./web-guarded-fetch.js";
 import {
   CacheEntry,
   DEFAULT_CACHE_TTL_MINUTES,
@@ -20,7 +22,7 @@ import {
   writeCache,
 } from "./web-shared.js";
 
-const SEARCH_PROVIDERS = ["brave", "perplexity", "grok", "gemini", "kimi"] as const;
+const SEARCH_PROVIDERS = ["brave", "perplexity", "grok", "gemini", "kimi", "exa"] as const;
 const DEFAULT_SEARCH_COUNT = 5;
 const MAX_SEARCH_COUNT = 10;
 
@@ -35,6 +37,10 @@ const XAI_API_ENDPOINT = "https://api.x.ai/v1/responses";
 const DEFAULT_GROK_MODEL = "grok-4-1-fast";
 const DEFAULT_KIMI_BASE_URL = "https://api.moonshot.ai/v1";
 const DEFAULT_KIMI_MODEL = "moonshot-v1-128k";
+
+const EXA_SEARCH_ENDPOINT = "https://api.exa.ai/search";
+const DEFAULT_EXA_NUM_RESULTS = 5;
+const DEFAULT_EXA_HIGHLIGHTS_MAX_CHARS = 8000;
 const KIMI_WEB_SEARCH_TOOL = {
   type: "builtin_function",
   function: { name: "$web_search" },
@@ -118,6 +124,24 @@ type KimiConfig = {
   apiKey?: string;
   baseUrl?: string;
   model?: string;
+};
+
+type ExaSearchConfig = {
+  apiKey?: string;
+  numResults?: number;
+  highlightsMaxChars?: number;
+};
+
+type ExaSearchResult = {
+  title?: string;
+  url?: string;
+  publishedDate?: string;
+  author?: string;
+  highlights?: string[];
+};
+
+type ExaSearchResponse = {
+  results?: ExaSearchResult[];
 };
 
 type GrokSearchResponse = {
@@ -324,6 +348,14 @@ function missingSearchKeyPayload(provider: (typeof SEARCH_PROVIDERS)[number]) {
       docs: "https://docs.openclaw.ai/tools/web",
     };
   }
+  if (provider === "exa") {
+    return {
+      error: "missing_exa_api_key",
+      message:
+        "web_search (exa) needs an Exa API key. Set EXA_API_KEY in the Gateway environment, or configure tools.web.search.exa.apiKey.",
+      docs: "https://docs.openclaw.ai/tools/web",
+    };
+  }
   return {
     error: "missing_brave_api_key",
     message: `web_search needs a Brave Search API key. Run \`${formatCliCommand("openclaw configure --section web")}\` to store it, or set BRAVE_API_KEY in the Gateway environment.`,
@@ -347,6 +379,9 @@ function resolveSearchProvider(search?: WebSearchConfig): (typeof SEARCH_PROVIDE
   }
   if (raw === "kimi") {
     return "kimi";
+  }
+  if (raw === "exa") {
+    return "exa";
   }
   if (raw === "brave") {
     return "brave";
@@ -599,6 +634,46 @@ function resolveGeminiModel(gemini?: GeminiConfig): string {
   return fromConfig || DEFAULT_GEMINI_MODEL;
 }
 
+function resolveExaSearchConfig(search?: WebSearchConfig): ExaSearchConfig {
+  if (!search || typeof search !== "object") {
+    return {};
+  }
+  const exa = "exa" in search ? search.exa : undefined;
+  if (!exa || typeof exa !== "object") {
+    return {};
+  }
+  return exa as ExaSearchConfig;
+}
+
+function resolveExaApiKey(exa?: ExaSearchConfig): string | undefined {
+  const fromConfig = normalizeApiKey(exa?.apiKey);
+  if (fromConfig) {
+    return fromConfig;
+  }
+  const fromEnv = normalizeApiKey(process.env.EXA_API_KEY);
+  return fromEnv || undefined;
+}
+
+function resolveExaNumResults(exa?: ExaSearchConfig): number {
+  const raw =
+    exa && "numResults" in exa && typeof exa.numResults === "number" ? exa.numResults : undefined;
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) {
+    return DEFAULT_EXA_NUM_RESULTS;
+  }
+  return Math.floor(raw);
+}
+
+function resolveExaHighlightsMaxChars(exa?: ExaSearchConfig): number {
+  const raw =
+    exa && "highlightsMaxChars" in exa && typeof exa.highlightsMaxChars === "number"
+      ? exa.highlightsMaxChars
+      : undefined;
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) {
+    return DEFAULT_EXA_HIGHLIGHTS_MAX_CHARS;
+  }
+  return Math.floor(raw);
+}
+
 async function withTrustedWebSearchEndpoint<T>(
   params: {
     url: string;
@@ -607,11 +682,12 @@ async function withTrustedWebSearchEndpoint<T>(
   },
   run: (response: Response) => Promise<T>,
 ): Promise<T> {
-  return withTrustedWebToolsEndpoint(
+  return withWebToolsNetworkGuard(
     {
       url: params.url,
       init: params.init,
       timeoutSeconds: params.timeoutSeconds,
+      policy: WEB_TOOLS_TRUSTED_NETWORK_SSRF_POLICY,
     },
     async ({ response }) => run(response),
   );
@@ -693,7 +769,7 @@ async function runGeminiSearch(params: {
         const batch = rawCitations.slice(i, i + MAX_CONCURRENT_REDIRECTS);
         const resolved = await Promise.all(
           batch.map(async (citation) => {
-            const resolvedUrl = await resolveCitationRedirectUrl(citation.url);
+            const resolvedUrl = await resolveRedirectUrl(citation.url);
             return { ...citation, url: resolvedUrl };
           }),
         );
@@ -703,6 +779,28 @@ async function runGeminiSearch(params: {
       return { content, citations };
     },
   );
+}
+
+const REDIRECT_TIMEOUT_MS = 5000;
+
+/**
+ * Resolve a redirect URL to its final destination using a HEAD request.
+ * Returns the original URL if resolution fails or times out.
+ */
+async function resolveRedirectUrl(url: string): Promise<string> {
+  try {
+    return await withWebToolsNetworkGuard(
+      {
+        url,
+        init: { method: "HEAD" },
+        timeoutMs: REDIRECT_TIMEOUT_MS,
+        policy: WEB_TOOLS_TRUSTED_NETWORK_SSRF_POLICY,
+      },
+      async ({ finalUrl }) => finalUrl || url,
+    );
+  } catch {
+    return url;
+  }
 }
 
 function resolveSearchCount(value: unknown, fallback: number): number {
@@ -1110,6 +1208,66 @@ async function runKimiSearch(params: {
   };
 }
 
+async function runExaSearch(params: {
+  query: string;
+  apiKey: string;
+  numResults: number;
+  highlightsMaxChars: number;
+  timeoutSeconds: number;
+}): Promise<{ results: Array<Record<string, unknown>>; citations: string[] }> {
+  const body = {
+    query: params.query,
+    numResults: params.numResults,
+    type: "auto",
+    contents: {
+      highlights: { maxCharacters: params.highlightsMaxChars, query: params.query },
+    },
+  };
+
+  return withTrustedWebSearchEndpoint(
+    {
+      url: EXA_SEARCH_ENDPOINT,
+      timeoutSeconds: params.timeoutSeconds,
+      init: {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": params.apiKey,
+          "x-exa-integration": "openclaw",
+        },
+        body: JSON.stringify(body),
+      },
+    },
+    async (res) => {
+      if (!res.ok) {
+        return await throwWebSearchApiError(res, "Exa");
+      }
+
+      const data = (await res.json()) as ExaSearchResponse;
+      const rawResults = Array.isArray(data.results) ? data.results : [];
+      const citations: string[] = [];
+      const results = rawResults.map((entry) => {
+        const url = entry.url ?? "";
+        if (url) {
+          citations.push(url);
+        }
+        const description = Array.isArray(entry.highlights) ? entry.highlights.join(" \n") : "";
+        const title = entry.title ?? "";
+        const rawSiteName = resolveSiteName(url);
+        return {
+          title: title ? wrapWebContent(title, "web_search") : "",
+          url, // Keep raw for tool chaining
+          description: description ? wrapWebContent(description, "web_search") : "",
+          published: entry.publishedDate || undefined,
+          author: entry.author || undefined,
+          siteName: rawSiteName || undefined,
+        };
+      });
+      return { results, citations };
+    },
+  );
+}
+
 async function runWebSearch(params: {
   query: string;
   count: number;
@@ -1128,6 +1286,8 @@ async function runWebSearch(params: {
   geminiModel?: string;
   kimiBaseUrl?: string;
   kimiModel?: string;
+  exaNumResults?: number;
+  exaHighlightsMaxChars?: number;
 }): Promise<Record<string, unknown>> {
   const cacheKey = normalizeCacheKey(
     params.provider === "brave"
@@ -1138,7 +1298,9 @@ async function runWebSearch(params: {
           ? `${params.provider}:${params.query}:${params.kimiBaseUrl ?? DEFAULT_KIMI_BASE_URL}:${params.kimiModel ?? DEFAULT_KIMI_MODEL}`
           : params.provider === "gemini"
             ? `${params.provider}:${params.query}:${params.geminiModel ?? DEFAULT_GEMINI_MODEL}`
-            : `${params.provider}:${params.query}:${params.grokModel ?? DEFAULT_GROK_MODEL}:${String(params.grokInlineCitations ?? false)}`,
+            : params.provider === "exa"
+              ? `${params.provider}:${params.query}:${params.exaNumResults ?? DEFAULT_EXA_NUM_RESULTS}:${params.exaHighlightsMaxChars ?? DEFAULT_EXA_HIGHLIGHTS_MAX_CHARS}`
+              : `${params.provider}:${params.query}:${params.grokModel ?? DEFAULT_GROK_MODEL}:${String(params.grokInlineCitations ?? false)}`,
   );
   const cached = readCache(SEARCH_CACHE, cacheKey);
   if (cached) {
@@ -1256,6 +1418,33 @@ async function runWebSearch(params: {
     return payload;
   }
 
+  if (params.provider === "exa") {
+    const { results, citations } = await runExaSearch({
+      query: params.query,
+      apiKey: params.apiKey,
+      numResults: params.exaNumResults ?? DEFAULT_EXA_NUM_RESULTS,
+      highlightsMaxChars: params.exaHighlightsMaxChars ?? DEFAULT_EXA_HIGHLIGHTS_MAX_CHARS,
+      timeoutSeconds: params.timeoutSeconds,
+    });
+
+    const payload = {
+      query: params.query,
+      provider: params.provider,
+      count: results.length,
+      tookMs: Date.now() - start,
+      externalContent: {
+        untrusted: true,
+        source: "web_search",
+        provider: params.provider,
+        wrapped: true,
+      },
+      results,
+      citations,
+    };
+    writeCache(SEARCH_CACHE, cacheKey, payload, params.cacheTtlMs);
+    return payload;
+  }
+
   if (params.provider !== "brave") {
     throw new Error("Unsupported web search provider.");
   }
@@ -1344,6 +1533,7 @@ export function createWebSearchTool(options?: {
   const grokConfig = resolveGrokConfig(search);
   const geminiConfig = resolveGeminiConfig(search);
   const kimiConfig = resolveKimiConfig(search);
+  const exaConfig = resolveExaSearchConfig(search);
 
   const description =
     provider === "perplexity"
@@ -1354,7 +1544,9 @@ export function createWebSearchTool(options?: {
           ? "Search the web using Kimi by Moonshot. Returns AI-synthesized answers with citations from native $web_search."
           : provider === "gemini"
             ? "Search the web using Gemini with Google Search grounding. Returns AI-synthesized answers with citations from Google Search."
-            : "Search the web using Brave Search API. Supports region-specific and localized search via country and language parameters. Returns titles, URLs, and snippets for fast research.";
+            : provider === "exa"
+              ? "Search the web using Exa search. Returns structured results with titles, URLs, and text snippets."
+              : "Search the web using Brave Search API. Supports region-specific and localized search via country and language parameters. Returns titles, URLs, and snippets for fast research.";
 
   return {
     label: "Web Search",
@@ -1373,7 +1565,9 @@ export function createWebSearchTool(options?: {
               ? resolveKimiApiKey(kimiConfig)
               : provider === "gemini"
                 ? resolveGeminiApiKey(geminiConfig)
-                : resolveSearchApiKey(search);
+                : provider === "exa"
+                  ? resolveExaApiKey(exaConfig)
+                  : resolveSearchApiKey(search);
 
       if (!apiKey) {
         return jsonResult(missingSearchKeyPayload(provider));
@@ -1445,6 +1639,8 @@ export function createWebSearchTool(options?: {
         geminiModel: resolveGeminiModel(geminiConfig),
         kimiBaseUrl: resolveKimiBaseUrl(kimiConfig),
         kimiModel: resolveKimiModel(kimiConfig),
+        exaNumResults: resolveExaNumResults(exaConfig),
+        exaHighlightsMaxChars: resolveExaHighlightsMaxChars(exaConfig),
       });
       return jsonResult(result);
     },
@@ -1468,5 +1664,8 @@ export const __testing = {
   resolveKimiModel,
   resolveKimiBaseUrl,
   extractKimiCitations,
-  resolveRedirectUrl: resolveCitationRedirectUrl,
+  resolveRedirectUrl,
+  resolveExaApiKey,
+  resolveExaNumResults,
+  resolveExaHighlightsMaxChars,
 } as const;

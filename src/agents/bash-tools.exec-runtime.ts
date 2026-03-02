@@ -291,10 +291,6 @@ export async function runExecProcess(opts: {
   const sessionId = createSessionSlug();
   const execCommand = opts.execCommand ?? opts.command;
   const supervisor = getProcessSupervisor();
-  const shellRuntimeEnv: Record<string, string> = {
-    ...opts.env,
-    OPENCLAW_SHELL: "exec",
-  };
 
   const session: ProcessSession = {
     id: sessionId,
@@ -389,7 +385,7 @@ export async function runExecProcess(opts: {
             containerName: opts.sandbox.containerName,
             command: execCommand,
             workdir: opts.containerWorkdir ?? opts.sandbox.containerWorkdir,
-            env: shellRuntimeEnv,
+            env: opts.env,
             tty: opts.usePty,
           }),
         ],
@@ -404,14 +400,14 @@ export async function runExecProcess(opts: {
         mode: "pty" as const,
         ptyCommand: execCommand,
         childFallbackArgv: childArgv,
-        env: shellRuntimeEnv,
+        env: opts.env,
         stdinMode: "pipe-open" as const,
       };
     }
     return {
       mode: "child" as const,
       argv: childArgv,
-      env: shellRuntimeEnv,
+      env: opts.env,
       stdinMode: "pipe-closed" as const,
     };
   })();

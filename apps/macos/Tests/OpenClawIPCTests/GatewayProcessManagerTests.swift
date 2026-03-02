@@ -1,5 +1,5 @@
-import Foundation
 import OpenClawKit
+import Foundation
 import os
 import Testing
 @testable import OpenClaw
@@ -69,6 +69,7 @@ struct GatewayProcessManagerTests {
         {
             self.pendingReceiveHandler.withLock { $0 = completionHandler }
         }
+
     }
 
     private final class FakeWebSocketSession: WebSocketSessioning, @unchecked Sendable {
@@ -82,9 +83,9 @@ struct GatewayProcessManagerTests {
         }
     }
 
-    @Test func clearsLastFailureWhenHealthSucceeds() async throws {
+    @Test func clearsLastFailureWhenHealthSucceeds() async {
         let session = FakeWebSocketSession()
-        let url = try #require(URL(string: "ws://example.invalid"))
+        let url = URL(string: "ws://example.invalid")!
         let connection = GatewayConnection(
             configProvider: { (url: url, token: nil, password: nil) },
             sessionBox: WebSocketSessionBox(session: session))

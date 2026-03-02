@@ -30,7 +30,7 @@ export type DiscordMessagePreflightContext = {
   mediaMaxBytes: number;
   textLimit: number;
   replyToMode: ReplyToMode;
-  ackReactionScope: "all" | "direct" | "group-all" | "group-mentions" | "off" | "none";
+  ackReactionScope: "all" | "direct" | "group-all" | "group-mentions";
   groupPolicy: "open" | "disabled" | "allowlist";
 
   data: DiscordMessageEvent;

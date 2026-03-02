@@ -1,8 +1,4 @@
-import {
-  DEFAULT_ACCOUNT_ID,
-  normalizeAccountId,
-  normalizeOptionalAccountId,
-} from "openclaw/plugin-sdk/account-id";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "openclaw/plugin-sdk/account-id";
 import type { CoreConfig, MatrixConfig } from "../types.js";
 import { resolveMatrixConfigForAccount } from "./client.js";
 import { credentialsMatchConfig, loadMatrixCredentials } from "./credentials.js";
@@ -20,7 +16,6 @@ function mergeAccountConfig(base: MatrixConfig, account: MatrixConfig): MatrixCo
   }
   // Don't propagate the accounts map into the merged per-account config
   delete (merged as Record<string, unknown>).accounts;
-  delete (merged as Record<string, unknown>).defaultAccount;
   return merged;
 }
 
@@ -59,13 +54,6 @@ export function listMatrixAccountIds(cfg: CoreConfig): string[] {
 }
 
 export function resolveDefaultMatrixAccountId(cfg: CoreConfig): string {
-  const preferred = normalizeOptionalAccountId(cfg.channels?.matrix?.defaultAccount);
-  if (
-    preferred &&
-    listMatrixAccountIds(cfg).some((accountId) => normalizeAccountId(accountId) === preferred)
-  ) {
-    return preferred;
-  }
   const ids = listMatrixAccountIds(cfg);
   if (ids.includes(DEFAULT_ACCOUNT_ID)) {
     return DEFAULT_ACCOUNT_ID;

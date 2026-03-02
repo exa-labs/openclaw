@@ -316,7 +316,6 @@ export const handleNodeEvent = async (ctx: NodeEventContext, nodeId: string, evt
             sourceChannel: "voice",
             sourceTool: "gateway.voice.transcript",
           },
-          senderIsOwner: false,
         },
         defaultRuntime,
         ctx.deps,
@@ -447,7 +446,6 @@ export const handleNodeEvent = async (ctx: NodeEventContext, nodeId: string, evt
           timeout:
             typeof link?.timeoutSeconds === "number" ? link.timeoutSeconds.toString() : undefined,
           messageChannel: "node",
-          senderIsOwner: false,
         },
         defaultRuntime,
         ctx.deps,

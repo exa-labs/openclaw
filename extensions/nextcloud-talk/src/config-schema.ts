@@ -60,7 +60,6 @@ export const NextcloudTalkAccountSchema = NextcloudTalkAccountSchemaBase.superRe
 
 export const NextcloudTalkConfigSchema = NextcloudTalkAccountSchemaBase.extend({
   accounts: z.record(z.string(), NextcloudTalkAccountSchema.optional()).optional(),
-  defaultAccount: z.string().optional(),
 }).superRefine((value, ctx) => {
   requireOpenAllowFrom({
     policy: value.dmPolicy,

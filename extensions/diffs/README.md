@@ -68,10 +68,7 @@ Set plugin-wide defaults in `~/.openclaw/openclaw.json`:
           defaults: {
             fontFamily: "Fira Code",
             fontSize: 15,
-            lineSpacing: 1.6,
             layout: "unified",
-            showLineNumbers: true,
-            diffIndicators: "bars",
             wordWrap: true,
             background: true,
             theme: "dark",

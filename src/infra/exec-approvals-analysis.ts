@@ -626,7 +626,7 @@ function renderQuotedArgv(argv: string[]): string {
   return argv.map((token) => shellEscapeSingleArg(token)).join(" ");
 }
 
-export function resolvePlannedSegmentArgv(segment: ExecCommandSegment): string[] | null {
+function resolvePlannedSegmentArgv(segment: ExecCommandSegment): string[] | null {
   if (segment.resolution?.policyBlocked === true) {
     return null;
   }
@@ -638,8 +638,7 @@ export function resolvePlannedSegmentArgv(segment: ExecCommandSegment): string[]
     return null;
   }
   const argv = [...baseArgv];
-  const resolvedExecutable =
-    segment.resolution?.resolvedRealPath?.trim() ?? segment.resolution?.resolvedPath?.trim() ?? "";
+  const resolvedExecutable = segment.resolution?.resolvedPath?.trim() ?? "";
   if (resolvedExecutable) {
     argv[0] = resolvedExecutable;
   }

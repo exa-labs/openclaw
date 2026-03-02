@@ -72,9 +72,6 @@ export function createAcpxRuntimeService(
             logger: ctx.logger,
             expectedVersion: pluginConfig.expectedVersion,
             allowInstall: pluginConfig.allowPluginLocalInstall,
-            spawnOptions: {
-              strictWindowsCmdWrapper: pluginConfig.strictWindowsCmdWrapper,
-            },
           });
           if (currentRevision !== lifecycleRevision) {
             return;

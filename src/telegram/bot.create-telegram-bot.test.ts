@@ -911,39 +911,6 @@ describe("createTelegramBot", () => {
     expect(payload.AccountId).toBe("opie");
     expect(payload.SessionKey).toBe("agent:opie:main");
   });
-
-  it("drops non-default account DMs without explicit bindings", async () => {
-    loadConfig.mockReturnValue({
-      channels: {
-        telegram: {
-          accounts: {
-            opie: {
-              botToken: "tok-opie",
-              dmPolicy: "open",
-            },
-          },
-        },
-      },
-    });
-
-    createTelegramBot({ token: "tok", accountId: "opie" });
-    const handler = getOnHandler("message") as (ctx: Record<string, unknown>) => Promise<void>;
-
-    await handler({
-      message: {
-        chat: { id: 123, type: "private" },
-        from: { id: 999, username: "testuser" },
-        text: "hello",
-        date: 1736380800,
-        message_id: 42,
-      },
-      me: { username: "openclaw_bot" },
-      getFile: async () => ({ download: async () => new Uint8Array() }),
-    });
-
-    expect(replySpy).not.toHaveBeenCalled();
-  });
-
   it("applies group mention overrides and fallback behavior", async () => {
     const cases: Array<{
       config: Record<string, unknown>;
@@ -1775,14 +1742,10 @@ describe("createTelegramBot", () => {
       });
 
       expect(sendMessageSpy.mock.calls.length).toBeGreaterThan(1);
-      for (const [index, call] of sendMessageSpy.mock.calls.entries()) {
-        const actual = (call[2] as { reply_to_message_id?: number } | undefined)
-          ?.reply_to_message_id;
-        if (mode === "all" || index === 0) {
-          expect(actual).toBe(messageId);
-        } else {
-          expect(actual).toBeUndefined();
-        }
+      for (const call of sendMessageSpy.mock.calls) {
+        expect((call[2] as { reply_to_message_id?: number } | undefined)?.reply_to_message_id).toBe(
+          messageId,
+        );
       }
     }
   });

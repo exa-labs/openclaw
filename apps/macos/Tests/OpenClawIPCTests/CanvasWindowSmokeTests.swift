@@ -1,6 +1,6 @@
 import AppKit
-import Foundation
 import OpenClawIPC
+import Foundation
 import Testing
 @testable import OpenClaw
 
@@ -30,7 +30,7 @@ struct CanvasWindowSmokeTests {
         controller.close()
     }
 
-    @Test func windowControllerShowsAndCloses() throws {
+    @Test func windowControllerShowsAndCloses() async throws {
         let root = FileManager().temporaryDirectory
             .appendingPathComponent("openclaw-canvas-test-\(UUID().uuidString)")
         try FileManager().createDirectory(at: root, withIntermediateDirectories: true)

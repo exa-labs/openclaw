@@ -2,10 +2,7 @@ import { EventEmitter } from "node:events";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ResolvedSynologyChatAccount } from "./types.js";
-import {
-  clearSynologyWebhookRateLimiterStateForTest,
-  createWebhookHandler,
-} from "./webhook-handler.js";
+import { createWebhookHandler } from "./webhook-handler.js";
 
 // Mock sendMessage to prevent real HTTP calls
 vi.mock("./client.js", () => ({
@@ -76,7 +73,6 @@ describe("createWebhookHandler", () => {
   let log: { info: any; warn: any; error: any };
 
   beforeEach(() => {
-    clearSynologyWebhookRateLimiterStateForTest();
     log = {
       info: vi.fn(),
       warn: vi.fn(),

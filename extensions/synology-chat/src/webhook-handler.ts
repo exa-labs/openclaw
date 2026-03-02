@@ -14,23 +14,11 @@ const rateLimiters = new Map<string, RateLimiter>();
 
 function getRateLimiter(account: ResolvedSynologyChatAccount): RateLimiter {
   let rl = rateLimiters.get(account.accountId);
-  if (!rl || rl.maxRequests() !== account.rateLimitPerMinute) {
-    rl?.clear();
+  if (!rl) {
     rl = new RateLimiter(account.rateLimitPerMinute);
     rateLimiters.set(account.accountId, rl);
   }
   return rl;
-}
-
-export function clearSynologyWebhookRateLimiterStateForTest(): void {
-  for (const limiter of rateLimiters.values()) {
-    limiter.clear();
-  }
-  rateLimiters.clear();
-}
-
-export function getSynologyWebhookRateLimiterCountForTest(): number {
-  return rateLimiters.size;
 }
 
 /** Read the full request body as a string. */

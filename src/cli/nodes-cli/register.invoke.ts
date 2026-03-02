@@ -228,7 +228,7 @@ async function maybeRequestNodesRunApproval(params: {
       id: approvalId,
       command: params.preparedCmdText,
       commandArgv: params.approvalPlan.argv,
-      systemRunPlan: params.approvalPlan,
+      systemRunPlanV2: params.approvalPlan,
       cwd: params.approvalPlan.cwd,
       nodeId: params.nodeId,
       host: "node",

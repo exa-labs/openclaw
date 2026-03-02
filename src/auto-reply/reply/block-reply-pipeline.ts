@@ -114,12 +114,10 @@ export function createBlockReplyPipeline(params: {
           return false;
         }
         await withTimeout(
-          Promise.resolve(
-            onBlockReply(payload, {
-              abortSignal: abortController.signal,
-              timeoutMs,
-            }),
-          ),
+          onBlockReply(payload, {
+            abortSignal: abortController.signal,
+            timeoutMs,
+          }) ?? Promise.resolve(),
           timeoutMs,
           timeoutError,
         );

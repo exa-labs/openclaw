@@ -46,6 +46,7 @@ import { logVerbose } from "../../globals.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { getAgentScopedMediaLocalRoots } from "../../media/local-roots.js";
 import { buildPairingReply } from "../../pairing/pairing-messages.js";
+import { upsertChannelPairingRequest } from "../../pairing/pairing-store.js";
 import { resolveAgentRoute } from "../../routing/resolve-route.js";
 import { resolveAgentIdFromSessionKey } from "../../routing/session-key.js";
 import { buildUntrustedChannelMetadata } from "../../security/channel-metadata.js";
@@ -64,7 +65,6 @@ import {
   resolveDiscordOwnerAllowFrom,
 } from "./allow-list.js";
 import { resolveDiscordDmCommandAccess } from "./dm-command-auth.js";
-import { handleDiscordDmCommandDecision } from "./dm-command-decision.js";
 import { resolveDiscordChannelInfo } from "./message-utils.js";
 import {
   readDiscordModelPickerRecentModels,
@@ -1269,7 +1269,6 @@ async function dispatchDiscordCommandInteraction(params: {
   const memberRoleIds = Array.isArray(interaction.rawData.member?.roles)
     ? interaction.rawData.member.roles.map((roleId: string) => String(roleId))
     : [];
-  const allowNameMatching = isDangerousNameMatchingEnabled(discordConfig);
   const ownerAllowList = normalizeDiscordAllowList(
     discordConfig?.allowFrom ?? discordConfig?.dm?.allowFrom ?? [],
     ["discord:", "user:", "pk:"],
@@ -1283,7 +1282,7 @@ async function dispatchDiscordCommandInteraction(params: {
             name: sender.name,
             tag: sender.tag,
           },
-          { allowNameMatching },
+          { allowNameMatching: isDangerousNameMatchingEnabled(discordConfig) },
         )
       : false;
   const guildInfo = resolveDiscordGuildEntry({
@@ -1367,20 +1366,22 @@ async function dispatchDiscordCommandInteraction(params: {
         name: sender.name,
         tag: sender.tag,
       },
-      allowNameMatching,
+      allowNameMatching: isDangerousNameMatchingEnabled(discordConfig),
       useAccessGroups,
     });
     commandAuthorized = dmAccess.commandAuthorized;
     if (dmAccess.decision !== "allow") {
-      await handleDiscordDmCommandDecision({
-        dmAccess,
-        accountId,
-        sender: {
+      if (dmAccess.decision === "pairing") {
+        const { code, created } = await upsertChannelPairingRequest({
+          channel: "discord",
           id: user.id,
-          tag: sender.tag,
-          name: sender.name,
-        },
-        onPairingCreated: async (code) => {
+          accountId,
+          meta: {
+            tag: sender.tag,
+            name: sender.name,
+          },
+        });
+        if (created) {
           await respond(
             buildPairingReply({
               channel: "discord",
@@ -1389,11 +1390,10 @@ async function dispatchDiscordCommandInteraction(params: {
             }),
             { ephemeral: true },
           );
-        },
-        onUnauthorized: async () => {
-          await respond("You are not authorized to use this command.", { ephemeral: true });
-        },
-      });
+        }
+      } else {
+        await respond("You are not authorized to use this command.", { ephemeral: true });
+      }
       return;
     }
   }
@@ -1403,7 +1403,7 @@ async function dispatchDiscordCommandInteraction(params: {
       guildInfo,
       memberRoleIds,
       sender,
-      allowNameMatching,
+      allowNameMatching: isDangerousNameMatchingEnabled(discordConfig),
     });
     const authorizers = useAccessGroups
       ? [
@@ -1509,7 +1509,7 @@ async function dispatchDiscordCommandInteraction(params: {
     channelConfig,
     guildInfo,
     sender: { id: sender.id, name: sender.name, tag: sender.tag },
-    allowNameMatching,
+    allowNameMatching: isDangerousNameMatchingEnabled(discordConfig),
   });
   const ctxPayload = finalizeInboundContext({
     Body: prompt,

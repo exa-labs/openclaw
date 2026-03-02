@@ -16,7 +16,6 @@ import type { RetryConfig } from "../infra/retry.js";
 import { redactSensitiveText } from "../logging/redact.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { mediaKindFromMime } from "../media/constants.js";
-import { buildOutboundMediaLoadOptions } from "../media/load-options.js";
 import { isGifMedia } from "../media/mime.js";
 import { normalizePollInput, type PollInput } from "../polls.js";
 import { loadWebMedia } from "../web/media.js";
@@ -559,13 +558,10 @@ export async function sendMessageTelegram(
   };
 
   if (mediaUrl) {
-    const media = await loadWebMedia(
-      mediaUrl,
-      buildOutboundMediaLoadOptions({
-        maxBytes: opts.maxBytes,
-        mediaLocalRoots: opts.mediaLocalRoots,
-      }),
-    );
+    const media = await loadWebMedia(mediaUrl, {
+      maxBytes: opts.maxBytes,
+      localRoots: opts.mediaLocalRoots,
+    });
     const kind = mediaKindFromMime(media.contentType ?? undefined);
     const isGif = isGifMedia({
       contentType: media.contentType,

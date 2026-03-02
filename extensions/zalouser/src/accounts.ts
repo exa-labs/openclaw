@@ -1,9 +1,5 @@
 import type { OpenClawConfig } from "openclaw/plugin-sdk";
-import {
-  DEFAULT_ACCOUNT_ID,
-  normalizeAccountId,
-  normalizeOptionalAccountId,
-} from "openclaw/plugin-sdk/account-id";
+import { DEFAULT_ACCOUNT_ID, normalizeAccountId } from "openclaw/plugin-sdk/account-id";
 import type { ResolvedZalouserAccount, ZalouserAccountConfig, ZalouserConfig } from "./types.js";
 import { runZca, parseJsonOutput } from "./zca.js";
 
@@ -25,12 +21,8 @@ export function listZalouserAccountIds(cfg: OpenClawConfig): string[] {
 
 export function resolveDefaultZalouserAccountId(cfg: OpenClawConfig): string {
   const zalouserConfig = cfg.channels?.zalouser as ZalouserConfig | undefined;
-  const preferred = normalizeOptionalAccountId(zalouserConfig?.defaultAccount);
-  if (
-    preferred &&
-    listZalouserAccountIds(cfg).some((accountId) => normalizeAccountId(accountId) === preferred)
-  ) {
-    return preferred;
+  if (zalouserConfig?.defaultAccount?.trim()) {
+    return zalouserConfig.defaultAccount.trim();
   }
   const ids = listZalouserAccountIds(cfg);
   if (ids.includes(DEFAULT_ACCOUNT_ID)) {

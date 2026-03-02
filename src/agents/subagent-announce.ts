@@ -517,14 +517,7 @@ async function resolveSubagentCompletionOrigin(params: {
       channel: route.binding.conversation.channel,
       accountId: route.binding.conversation.accountId,
       to: `channel:${route.binding.conversation.conversationId}`,
-      // `conversationId` identifies the target conversation (channel/DM/thread),
-      // but it is not always a thread identifier. Passing it as `threadId` breaks
-      // Slack DM/top-level delivery by forcing an invalid thread_ts. Preserve only
-      // explicit requester thread hints for channels that actually use threading.
-      threadId:
-        requesterOrigin?.threadId != null && requesterOrigin.threadId !== ""
-          ? String(requesterOrigin.threadId)
-          : undefined,
+      threadId: route.binding.conversation.conversationId,
     };
     return {
       // Bound target is authoritative; requester hints fill only missing fields.

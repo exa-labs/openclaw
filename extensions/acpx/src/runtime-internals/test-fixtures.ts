@@ -20,7 +20,6 @@ const fs = require("node:fs");
 
 const args = process.argv.slice(2);
 const logPath = process.env.MOCK_ACPX_LOG;
-const openclawShell = process.env.OPENCLAW_SHELL || "";
 const writeLog = (entry) => {
   if (!logPath) return;
   fs.appendFileSync(logPath, JSON.stringify(entry) + "\n");
@@ -147,14 +146,7 @@ if (command === "sessions" && args[commandIndex + 1] === "close") {
 
 if (command === "prompt") {
   const stdinText = fs.readFileSync(0, "utf8");
-  writeLog({
-    kind: "prompt",
-    agent,
-    args,
-    sessionName: sessionFromOption,
-    stdinText,
-    openclawShell,
-  });
+  writeLog({ kind: "prompt", agent, args, sessionName: sessionFromOption, stdinText });
   const requestId = "req-1";
 
   emitJson({
@@ -280,7 +272,6 @@ export async function createMockRuntimeFixture(params?: {
     cwd: dir,
     permissionMode: params?.permissionMode ?? "approve-all",
     nonInteractivePermissions: "fail",
-    strictWindowsCmdWrapper: true,
     queueOwnerTtlSeconds: params?.queueOwnerTtlSeconds ?? 0.1,
   };
 

@@ -11,7 +11,6 @@ import {
   modelKey,
   resolveAllowedModelRef,
   resolveConfiguredModelRef,
-  resolveThinkingDefault,
   resolveModelRefFromString,
 } from "./model-selection.js";
 
@@ -71,17 +70,17 @@ describe("model-selection", () => {
       });
     });
 
-    it("keeps openai gpt-5.3 codex refs on the openai provider", () => {
+    it("normalizes openai gpt-5.3 codex refs to openai-codex provider", () => {
       expect(parseModelRef("openai/gpt-5.3-codex", "anthropic")).toEqual({
-        provider: "openai",
+        provider: "openai-codex",
         model: "gpt-5.3-codex",
       });
       expect(parseModelRef("gpt-5.3-codex", "openai")).toEqual({
-        provider: "openai",
+        provider: "openai-codex",
         model: "gpt-5.3-codex",
       });
       expect(parseModelRef("openai/gpt-5.3-codex-codex", "anthropic")).toEqual({
-        provider: "openai",
+        provider: "openai-codex",
         model: "gpt-5.3-codex-codex",
       });
     });
@@ -469,105 +468,6 @@ describe("model-selection", () => {
         defaultModel: "gpt-4",
       });
       expect(result).toEqual({ provider: "openai", model: "gpt-4" });
-    });
-  });
-
-  describe("resolveThinkingDefault", () => {
-    it("prefers per-model params.thinking over global thinkingDefault", () => {
-      const cfg = {
-        agents: {
-          defaults: {
-            thinkingDefault: "low",
-            models: {
-              "anthropic/claude-opus-4-6": {
-                params: { thinking: "high" },
-              },
-            },
-          },
-        },
-      } as OpenClawConfig;
-
-      expect(
-        resolveThinkingDefault({
-          cfg,
-          provider: "anthropic",
-          model: "claude-opus-4-6",
-          catalog: [
-            {
-              provider: "anthropic",
-              id: "claude-opus-4-6",
-              name: "Claude Opus 4.6",
-              reasoning: true,
-            },
-          ],
-        }),
-      ).toBe("high");
-    });
-
-    it("accepts per-model params.thinking=adaptive", () => {
-      const cfg = {
-        agents: {
-          defaults: {
-            models: {
-              "anthropic/claude-opus-4-6": {
-                params: { thinking: "adaptive" },
-              },
-            },
-          },
-        },
-      } as OpenClawConfig;
-
-      expect(
-        resolveThinkingDefault({
-          cfg,
-          provider: "anthropic",
-          model: "claude-opus-4-6",
-          catalog: [
-            {
-              provider: "anthropic",
-              id: "claude-opus-4-6",
-              name: "Claude Opus 4.6",
-              reasoning: true,
-            },
-          ],
-        }),
-      ).toBe("adaptive");
-    });
-
-    it("defaults Anthropic Claude 4.6 models to adaptive", () => {
-      const cfg = {} as OpenClawConfig;
-
-      expect(
-        resolveThinkingDefault({
-          cfg,
-          provider: "anthropic",
-          model: "claude-opus-4-6",
-          catalog: [
-            {
-              provider: "anthropic",
-              id: "claude-opus-4-6",
-              name: "Claude Opus 4.6",
-              reasoning: true,
-            },
-          ],
-        }),
-      ).toBe("adaptive");
-
-      expect(
-        resolveThinkingDefault({
-          cfg,
-          provider: "amazon-bedrock",
-          model: "us.anthropic.claude-sonnet-4-6-v1:0",
-          catalog: [
-            {
-              provider: "amazon-bedrock",
-              id: "us.anthropic.claude-sonnet-4-6-v1:0",
-              name: "Claude Sonnet 4.6",
-              reasoning: true,
-            },
-          ],
-        }),
-      ).toBe("adaptive");
     });
   });
 });

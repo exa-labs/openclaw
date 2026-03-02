@@ -406,42 +406,20 @@ export function buildAgentSelectCustomId(componentId: string): string {
 
 /**
  * Parse agent component data from Carbon's parsed ComponentData
- * Supports both legacy { componentId } and Components v2 { cid } payloads.
+ * Carbon parses "key:componentId=xxx" into { componentId: "xxx" }
  */
-function readParsedComponentId(data: ComponentData): unknown {
-  if (!data || typeof data !== "object") {
-    return undefined;
-  }
-  return "cid" in data
-    ? (data as Record<string, unknown>).cid
-    : (data as Record<string, unknown>).componentId;
-}
-
 function parseAgentComponentData(data: ComponentData): {
   componentId: string;
 } | null {
-  const raw = readParsedComponentId(data);
-
-  const decodeSafe = (value: string): string => {
-    // `cid` values may be raw (not URI-encoded). Guard against malformed % sequences.
-    // Only attempt decoding when it looks like it contains percent-encoding.
-    if (!value.includes("%")) {
-      return value;
-    }
-    // If it has a % but not a valid %XX sequence, skip decode.
-    if (!/%[0-9A-Fa-f]{2}/.test(value)) {
-      return value;
-    }
-    try {
-      return decodeURIComponent(value);
-    } catch {
-      return value;
-    }
-  };
-
+  if (!data || typeof data !== "object") {
+    return null;
+  }
   const componentId =
-    typeof raw === "string" ? decodeSafe(raw) : typeof raw === "number" ? String(raw) : null;
-
+    typeof data.componentId === "string"
+      ? decodeURIComponent(data.componentId)
+      : typeof data.componentId === "number"
+        ? String(data.componentId)
+        : null;
   if (!componentId) {
     return null;
   }
@@ -600,7 +578,10 @@ function parseDiscordComponentData(
   if (!data || typeof data !== "object") {
     return null;
   }
-  const rawComponentId = readParsedComponentId(data);
+  const rawComponentId =
+    "cid" in data
+      ? (data as { cid?: unknown }).cid
+      : (data as { componentId?: unknown }).componentId;
   const rawModalId =
     "mid" in data ? (data as { mid?: unknown }).mid : (data as { modalId?: unknown }).modalId;
   let componentId = normalizeComponentId(rawComponentId);
@@ -1456,7 +1437,7 @@ export class AgentSelectMenu extends StringSelectMenu {
 
 class DiscordComponentButton extends Button {
   label = "component";
-  customId = "__openclaw_discord_component_button_wildcard__";
+  customId = "*";
   style = ButtonStyle.Primary;
   customIdParser = parseDiscordComponentCustomIdForCarbon;
   private ctx: AgentComponentContext;
@@ -1488,7 +1469,7 @@ class DiscordComponentButton extends Button {
 }
 
 class DiscordComponentStringSelect extends StringSelectMenu {
-  customId = "__openclaw_discord_component_string_select_wildcard__";
+  customId = "*";
   options: APIStringSelectComponent["options"] = [];
   customIdParser = parseDiscordComponentCustomIdForCarbon;
   private ctx: AgentComponentContext;
@@ -1511,7 +1492,7 @@ class DiscordComponentStringSelect extends StringSelectMenu {
 }
 
 class DiscordComponentUserSelect extends UserSelectMenu {
-  customId = "__openclaw_discord_component_user_select_wildcard__";
+  customId = "*";
   customIdParser = parseDiscordComponentCustomIdForCarbon;
   private ctx: AgentComponentContext;
 
@@ -1533,7 +1514,7 @@ class DiscordComponentUserSelect extends UserSelectMenu {
 }
 
 class DiscordComponentRoleSelect extends RoleSelectMenu {
-  customId = "__openclaw_discord_component_role_select_wildcard__";
+  customId = "*";
   customIdParser = parseDiscordComponentCustomIdForCarbon;
   private ctx: AgentComponentContext;
 
@@ -1555,7 +1536,7 @@ class DiscordComponentRoleSelect extends RoleSelectMenu {
 }
 
 class DiscordComponentMentionableSelect extends MentionableSelectMenu {
-  customId = "__openclaw_discord_component_mentionable_select_wildcard__";
+  customId = "*";
   customIdParser = parseDiscordComponentCustomIdForCarbon;
   private ctx: AgentComponentContext;
 
@@ -1577,7 +1558,7 @@ class DiscordComponentMentionableSelect extends MentionableSelectMenu {
 }
 
 class DiscordComponentChannelSelect extends ChannelSelectMenu {
-  customId = "__openclaw_discord_component_channel_select_wildcard__";
+  customId = "*";
   customIdParser = parseDiscordComponentCustomIdForCarbon;
   private ctx: AgentComponentContext;
 
@@ -1600,7 +1581,7 @@ class DiscordComponentChannelSelect extends ChannelSelectMenu {
 
 class DiscordComponentModal extends Modal {
   title = "OpenClaw form";
-  customId = "__openclaw_discord_component_modal_wildcard__";
+  customId = "*";
   components = [];
   customIdParser = parseDiscordModalCustomIdForCarbon;
   private ctx: AgentComponentContext;

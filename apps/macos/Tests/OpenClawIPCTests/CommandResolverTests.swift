@@ -24,7 +24,7 @@ import Testing
         try FileManager().setAttributes([.posixPermissions: 0o755], ofItemAtPath: path.path)
     }
 
-    @Test func prefersOpenClawBinary() throws {
+    @Test func prefersOpenClawBinary() async throws {
         let defaults = self.makeDefaults()
         defaults.set(AppState.ConnectionMode.local.rawValue, forKey: connectionModeKey)
 
@@ -38,7 +38,7 @@ import Testing
         #expect(cmd.prefix(2).elementsEqual([openclawPath.path, "gateway"]))
     }
 
-    @Test func fallsBackToNodeAndScript() throws {
+    @Test func fallsBackToNodeAndScript() async throws {
         let defaults = self.makeDefaults()
         defaults.set(AppState.ConnectionMode.local.rawValue, forKey: connectionModeKey)
 
@@ -66,7 +66,7 @@ import Testing
         }
     }
 
-    @Test func prefersOpenClawBinaryOverPnpm() throws {
+    @Test func prefersOpenClawBinaryOverPnpm() async throws {
         let defaults = self.makeDefaults()
         defaults.set(AppState.ConnectionMode.local.rawValue, forKey: connectionModeKey)
 
@@ -88,7 +88,7 @@ import Testing
         #expect(cmd.prefix(2).elementsEqual([openclawPath.path, "rpc"]))
     }
 
-    @Test func usesOpenClawBinaryWithoutNodeRuntime() throws {
+    @Test func usesOpenClawBinaryWithoutNodeRuntime() async throws {
         let defaults = self.makeDefaults()
         defaults.set(AppState.ConnectionMode.local.rawValue, forKey: connectionModeKey)
 
@@ -108,7 +108,7 @@ import Testing
         #expect(cmd.prefix(2).elementsEqual([openclawPath.path, "gateway"]))
     }
 
-    @Test func fallsBackToPnpm() throws {
+    @Test func fallsBackToPnpm() async throws {
         let defaults = self.makeDefaults()
         defaults.set(AppState.ConnectionMode.local.rawValue, forKey: connectionModeKey)
 
@@ -127,7 +127,7 @@ import Testing
         #expect(cmd.prefix(4).elementsEqual([pnpmPath.path, "--silent", "openclaw", "rpc"]))
     }
 
-    @Test func pnpmKeepsExtraArgsAfterSubcommand() throws {
+    @Test func pnpmKeepsExtraArgsAfterSubcommand() async throws {
         let defaults = self.makeDefaults()
         defaults.set(AppState.ConnectionMode.local.rawValue, forKey: connectionModeKey)
 
@@ -148,7 +148,7 @@ import Testing
         #expect(cmd.suffix(2).elementsEqual(["--timeout", "5"]))
     }
 
-    @Test func preferredPathsStartWithProjectNodeBins() throws {
+    @Test func preferredPathsStartWithProjectNodeBins() async throws {
         let tmp = try makeTempDir()
         CommandResolver.setProjectRoot(tmp.path)
 
@@ -156,7 +156,7 @@ import Testing
         #expect(first == tmp.appendingPathComponent("node_modules/.bin").path)
     }
 
-    @Test func buildsSSHCommandForRemoteMode() {
+    @Test func buildsSSHCommandForRemoteMode() async throws {
         let defaults = self.makeDefaults()
         defaults.set(AppState.ConnectionMode.remote.rawValue, forKey: connectionModeKey)
         defaults.set("openclaw@example.com:2222", forKey: remoteTargetKey)
@@ -187,13 +187,13 @@ import Testing
         }
     }
 
-    @Test func rejectsUnsafeSSHTargets() {
+    @Test func rejectsUnsafeSSHTargets() async throws {
         #expect(CommandResolver.parseSSHTarget("-oProxyCommand=calc") == nil)
         #expect(CommandResolver.parseSSHTarget("host:-oProxyCommand=calc") == nil)
         #expect(CommandResolver.parseSSHTarget("user@host:2222")?.port == 2222)
     }
 
-    @Test func configRootLocalOverridesRemoteDefaults() throws {
+    @Test func configRootLocalOverridesRemoteDefaults() async throws {
         let defaults = self.makeDefaults()
         defaults.set(AppState.ConnectionMode.remote.rawValue, forKey: connectionModeKey)
         defaults.set("openclaw@example.com:2222", forKey: remoteTargetKey)

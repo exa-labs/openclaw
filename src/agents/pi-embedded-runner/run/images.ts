@@ -4,10 +4,7 @@ import type { ImageContent } from "@mariozechner/pi-ai";
 import { resolveUserPath } from "../../../utils.js";
 import { loadWebMedia } from "../../../web/media.js";
 import type { ImageSanitizationLimits } from "../../image-sanitization.js";
-import {
-  createSandboxBridgeReadFile,
-  resolveSandboxedBridgeMediaPath,
-} from "../../sandbox-media-paths.js";
+import { resolveSandboxedBridgeMediaPath } from "../../sandbox-media-paths.js";
 import { assertSandboxPath } from "../../sandbox-paths.js";
 import type { SandboxFsBridge } from "../../sandbox/fs-bridge.js";
 import { sanitizeImageBlocks } from "../../tool-images.js";
@@ -238,7 +235,8 @@ export async function loadImageFromRef(
       ? await loadWebMedia(targetPath, {
           maxBytes: options.maxBytes,
           sandboxValidated: true,
-          readFile: createSandboxBridgeReadFile({ sandbox: options.sandbox }),
+          readFile: (filePath) =>
+            options.sandbox!.bridge.readFile({ filePath, cwd: options.sandbox!.root }),
         })
       : await loadWebMedia(targetPath, options?.maxBytes);
 

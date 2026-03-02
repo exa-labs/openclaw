@@ -25,6 +25,7 @@ import { enqueueSystemEvent } from "../../infra/system-events.js";
 import { logDebug } from "../../logger.js";
 import { getChildLogger } from "../../logging.js";
 import { buildPairingReply } from "../../pairing/pairing-messages.js";
+import { upsertChannelPairingRequest } from "../../pairing/pairing-store.js";
 import { resolveAgentRoute } from "../../routing/resolve-route.js";
 import { DEFAULT_ACCOUNT_ID, resolveAgentIdFromSessionKey } from "../../routing/session-key.js";
 import { fetchPluralKitMessageInfo } from "../pluralkit.js";
@@ -41,7 +42,6 @@ import {
   resolveGroupDmAllow,
 } from "./allow-list.js";
 import { resolveDiscordDmCommandAccess } from "./dm-command-auth.js";
-import { handleDiscordDmCommandDecision } from "./dm-command-decision.js";
 import {
   formatDiscordUserTag,
   resolveDiscordSystemLocation,
@@ -175,7 +175,6 @@ export async function preflightDiscordMessage(
   const dmPolicy = params.discordConfig?.dmPolicy ?? params.discordConfig?.dm?.policy ?? "pairing";
   const useAccessGroups = params.cfg.commands?.useAccessGroups !== false;
   const resolvedAccountId = params.accountId ?? DEFAULT_ACCOUNT_ID;
-  const allowNameMatching = isDangerousNameMatchingEnabled(params.discordConfig);
   let commandAuthorized = true;
   if (isDirectMessage) {
     if (dmPolicy === "disabled") {
@@ -191,7 +190,7 @@ export async function preflightDiscordMessage(
         name: sender.name,
         tag: sender.tag,
       },
-      allowNameMatching,
+      allowNameMatching: isDangerousNameMatchingEnabled(params.discordConfig),
       useAccessGroups,
     });
     commandAuthorized = dmAccess.commandAuthorized;
@@ -199,15 +198,17 @@ export async function preflightDiscordMessage(
       const allowMatchMeta = formatAllowlistMatchMeta(
         dmAccess.allowMatch.allowed ? dmAccess.allowMatch : undefined,
       );
-      await handleDiscordDmCommandDecision({
-        dmAccess,
-        accountId: resolvedAccountId,
-        sender: {
+      if (dmAccess.decision === "pairing") {
+        const { code, created } = await upsertChannelPairingRequest({
+          channel: "discord",
           id: author.id,
-          tag: formatDiscordUserTag(author),
-          name: author.username ?? undefined,
-        },
-        onPairingCreated: async (code) => {
+          accountId: resolvedAccountId,
+          meta: {
+            tag: formatDiscordUserTag(author),
+            name: author.username ?? undefined,
+          },
+        });
+        if (created) {
           logVerbose(
             `discord pairing request sender=${author.id} tag=${formatDiscordUserTag(author)} (${allowMatchMeta})`,
           );
@@ -228,13 +229,12 @@ export async function preflightDiscordMessage(
           } catch (err) {
             logVerbose(`discord pairing reply failed for ${author.id}: ${String(err)}`);
           }
-        },
-        onUnauthorized: async () => {
-          logVerbose(
-            `Blocked unauthorized discord sender ${sender.id} (dmPolicy=${dmPolicy}, ${allowMatchMeta})`,
-          );
-        },
-      });
+        }
+      } else {
+        logVerbose(
+          `Blocked unauthorized discord sender ${sender.id} (dmPolicy=${dmPolicy}, ${allowMatchMeta})`,
+        );
+      }
       return null;
     }
   }
@@ -440,17 +440,12 @@ export async function preflightDiscordMessage(
     })
   ) {
     if (params.groupPolicy === "disabled") {
-      logDebug(`[discord-preflight] drop: groupPolicy disabled`);
       logVerbose(`discord: drop guild message (groupPolicy: disabled, ${channelMatchMeta})`);
     } else if (!channelAllowlistConfigured) {
-      logDebug(`[discord-preflight] drop: groupPolicy allowlist, no channel allowlist configured`);
       logVerbose(
         `discord: drop guild message (groupPolicy: allowlist, no channel allowlist, ${channelMatchMeta})`,
       );
     } else {
-      logDebug(
-        `[discord] Ignored message from channel ${messageChannelId} (not in guild allowlist). Add to guilds.<guildId>.channels to enable.`,
-      );
       logVerbose(
         `Blocked discord channel ${messageChannelId} not in guild channel allowlist (groupPolicy: allowlist, ${channelMatchMeta})`,
       );
@@ -575,7 +570,7 @@ export async function preflightDiscordMessage(
     guildInfo,
     memberRoleIds,
     sender,
-    allowNameMatching,
+    allowNameMatching: isDangerousNameMatchingEnabled(params.discordConfig),
   });
 
   if (!isDirectMessage) {
@@ -592,7 +587,7 @@ export async function preflightDiscordMessage(
             name: sender.name,
             tag: sender.tag,
           },
-          { allowNameMatching },
+          { allowNameMatching: isDangerousNameMatchingEnabled(params.discordConfig) },
         )
       : false;
     const commandGate = resolveControlCommandGate({

@@ -62,7 +62,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -172,7 +171,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
     } else {
       Manifest.permission.READ_EXTERNAL_STORAGE
     }
-  val motionPermissionRequired = true
+  val motionPermissionRequired = Build.VERSION.SDK_INT >= 29
   val motionAvailable = remember(context) { hasMotionCapabilities(context) }
 
   var notificationsPermissionGranted by
@@ -425,7 +424,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
       }
       item {
         ListItem(
-          modifier = Modifier.settingsRowModifier(),
+          modifier = settingsRowModifier(),
           colors = listItemColors,
           headlineContent = { Text("Microphone permission", style = mobileHeadline) },
           supportingContent = {
@@ -478,7 +477,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
       }
     item {
       ListItem(
-        modifier = Modifier.settingsRowModifier(),
+        modifier = settingsRowModifier(),
         colors = listItemColors,
         headlineContent = { Text("Allow Camera", style = mobileHeadline) },
         supportingContent = { Text("Allows the gateway to request photos or short video clips (foreground only).", style = mobileCallout) },
@@ -511,7 +510,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
           else -> "Grant"
         }
       ListItem(
-        modifier = Modifier.settingsRowModifier(),
+        modifier = settingsRowModifier(),
         colors = listItemColors,
         headlineContent = { Text("SMS Permission", style = mobileHeadline) },
         supportingContent = {
@@ -562,7 +561,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
             "Grant"
           }
         ListItem(
-          modifier = Modifier.settingsRowModifier(),
+          modifier = settingsRowModifier(),
           colors = listItemColors,
           headlineContent = { Text("System Notifications", style = mobileHeadline) },
           supportingContent = {
@@ -590,7 +589,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
       }
       item {
         ListItem(
-          modifier = Modifier.settingsRowModifier(),
+          modifier = settingsRowModifier(),
           colors = listItemColors,
           headlineContent = { Text("Notification Listener Access", style = mobileHeadline) },
           supportingContent = {
@@ -625,7 +624,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
       }
       item {
         ListItem(
-          modifier = Modifier.settingsRowModifier(),
+          modifier = settingsRowModifier(),
           colors = listItemColors,
           headlineContent = { Text("Photos Permission", style = mobileHeadline) },
           supportingContent = {
@@ -656,7 +655,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
       }
       item {
         ListItem(
-          modifier = Modifier.settingsRowModifier(),
+          modifier = settingsRowModifier(),
           colors = listItemColors,
           headlineContent = { Text("Contacts Permission", style = mobileHeadline) },
           supportingContent = {
@@ -687,7 +686,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
       }
       item {
         ListItem(
-          modifier = Modifier.settingsRowModifier(),
+          modifier = settingsRowModifier(),
           colors = listItemColors,
           headlineContent = { Text("Calendar Permission", style = mobileHeadline) },
           supportingContent = {
@@ -725,7 +724,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
             else -> "Grant"
           }
         ListItem(
-          modifier = Modifier.settingsRowModifier(),
+          modifier = settingsRowModifier(),
           colors = listItemColors,
           headlineContent = { Text("Motion Permission", style = mobileHeadline) },
           supportingContent = {
@@ -769,7 +768,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
       }
       item {
         ListItem(
-          modifier = Modifier.settingsRowModifier(),
+          modifier = settingsRowModifier(),
           colors = listItemColors,
           headlineContent = { Text("Install App Updates", style = mobileHeadline) },
           supportingContent = {
@@ -803,7 +802,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
         )
       }
       item {
-        Column(modifier = Modifier.settingsRowModifier(), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        Column(modifier = settingsRowModifier(), verticalArrangement = Arrangement.spacedBy(0.dp)) {
           ListItem(
             modifier = Modifier.fillMaxWidth(),
             colors = listItemColors,
@@ -878,7 +877,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
       }
     item {
       ListItem(
-        modifier = Modifier.settingsRowModifier(),
+        modifier = settingsRowModifier(),
         colors = listItemColors,
         headlineContent = { Text("Prevent Sleep", style = mobileHeadline) },
         supportingContent = { Text("Keeps the screen awake while OpenClaw is open.", style = mobileCallout) },
@@ -898,7 +897,7 @@ fun SettingsSheet(viewModel: MainViewModel) {
       }
     item {
       ListItem(
-        modifier = Modifier.settingsRowModifier(),
+        modifier = settingsRowModifier(),
         colors = listItemColors,
         headlineContent = { Text("Debug Canvas Status", style = mobileHeadline) },
         supportingContent = { Text("Show status text in the canvas when debug is enabled.", style = mobileCallout) },
@@ -928,8 +927,8 @@ private fun settingsTextFieldColors() =
     cursorColor = mobileAccent,
   )
 
-private fun Modifier.settingsRowModifier() =
-  this
+private fun settingsRowModifier() =
+  Modifier
     .fillMaxWidth()
     .border(width = 1.dp, color = mobileBorder, shape = RoundedCornerShape(14.dp))
     .background(Color.White, RoundedCornerShape(14.dp))
@@ -971,10 +970,14 @@ private fun openNotificationListenerSettings(context: Context) {
 }
 
 private fun openUnknownAppSourcesSettings(context: Context) {
+  if (Build.VERSION.SDK_INT < 26) {
+    openAppSettings(context)
+    return
+  }
   val intent =
     Intent(
       Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-      "package:${context.packageName}".toUri(),
+      Uri.parse("package:${context.packageName}"),
     )
   runCatching {
     context.startActivity(intent)
@@ -994,6 +997,7 @@ private fun isNotificationListenerEnabled(context: Context): Boolean {
 }
 
 private fun canInstallUnknownApps(context: Context): Boolean {
+  if (Build.VERSION.SDK_INT < 26) return true
   return context.packageManager.canRequestPackageInstalls()
 }
 

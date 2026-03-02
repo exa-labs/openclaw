@@ -59,8 +59,6 @@ export function resolveFailoverStatus(reason: FailoverReason): number | undefine
       return 400;
     case "model_not_found":
       return 404;
-    case "session_expired":
-      return 410; // Gone - session no longer exists
     default:
       return undefined;
   }
@@ -183,19 +181,7 @@ export function resolveFailoverReasonFromError(err: unknown): FailoverReason | n
   }
 
   const code = (getErrorCode(err) ?? "").toUpperCase();
-  if (
-    [
-      "ETIMEDOUT",
-      "ESOCKETTIMEDOUT",
-      "ECONNRESET",
-      "ECONNABORTED",
-      "ECONNREFUSED",
-      "ENETUNREACH",
-      "EHOSTUNREACH",
-      "ENETRESET",
-      "EAI_AGAIN",
-    ].includes(code)
-  ) {
+  if (["ETIMEDOUT", "ESOCKETTIMEDOUT", "ECONNRESET", "ECONNABORTED"].includes(code)) {
     return "timeout";
   }
   if (isTimeoutError(err)) {

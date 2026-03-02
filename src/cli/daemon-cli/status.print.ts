@@ -214,7 +214,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
     );
     for (const hint of renderRuntimeHints(
       service.runtime,
-      service.command?.environment ?? process.env,
+      (service.command?.environment ?? process.env) as NodeJS.ProcessEnv,
     )) {
       defaultRuntime.error(errorText(hint));
     }
@@ -222,7 +222,7 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
   }
 
   if (service.runtime?.cachedLabel) {
-    const env = service.command?.environment ?? process.env;
+    const env = (service.command?.environment ?? process.env) as NodeJS.ProcessEnv;
     const labelValue = resolveGatewayLaunchAgentLabel(env.OPENCLAW_PROFILE);
     defaultRuntime.error(
       errorText(
@@ -265,13 +265,15 @@ export function printDaemonStatus(status: DaemonStatus, opts: { json: boolean })
       defaultRuntime.error(`${errorText("Last gateway error:")} ${status.lastError}`);
     }
     if (process.platform === "linux") {
-      const env = service.command?.environment ?? process.env;
+      const env = (service.command?.environment ?? process.env) as NodeJS.ProcessEnv;
       const unit = resolveGatewaySystemdServiceName(env.OPENCLAW_PROFILE);
       defaultRuntime.error(
         errorText(`Logs: journalctl --user -u ${unit}.service -n 200 --no-pager`),
       );
     } else if (process.platform === "darwin") {
-      const logs = resolveGatewayLogPaths(service.command?.environment ?? process.env);
+      const logs = resolveGatewayLogPaths(
+        (service.command?.environment ?? process.env) as NodeJS.ProcessEnv,
+      );
       defaultRuntime.error(`${errorText("Logs:")} ${shortenHomePath(logs.stdoutPath)}`);
       defaultRuntime.error(`${errorText("Errors:")} ${shortenHomePath(logs.stderrPath)}`);
     }

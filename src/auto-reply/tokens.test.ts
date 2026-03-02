@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isSilentReplyPrefixText, isSilentReplyText, stripSilentToken } from "./tokens.js";
+import { isSilentReplyPrefixText, isSilentReplyText } from "./tokens.js";
 
 describe("isSilentReplyText", () => {
   it("returns true for exact token", () => {
@@ -33,37 +33,6 @@ describe("isSilentReplyText", () => {
   it("works with custom token", () => {
     expect(isSilentReplyText("HEARTBEAT_OK", "HEARTBEAT_OK")).toBe(true);
     expect(isSilentReplyText("Checked inbox. HEARTBEAT_OK", "HEARTBEAT_OK")).toBe(false);
-  });
-});
-
-describe("stripSilentToken", () => {
-  it("strips token from end of text", () => {
-    expect(stripSilentToken("Done.\n\nNO_REPLY")).toBe("Done.");
-  });
-
-  it("does not strip token from start of text", () => {
-    expect(stripSilentToken("NO_REPLY 👍")).toBe("NO_REPLY 👍");
-  });
-
-  it("strips token with emoji (#30916)", () => {
-    expect(stripSilentToken("😄 NO_REPLY")).toBe("😄");
-  });
-
-  it("does not strip embedded token suffix without whitespace delimiter", () => {
-    expect(stripSilentToken("interject.NO_REPLY")).toBe("interject.NO_REPLY");
-  });
-
-  it("strips only trailing occurrence", () => {
-    expect(stripSilentToken("NO_REPLY ok NO_REPLY")).toBe("NO_REPLY ok");
-  });
-
-  it("returns empty string when only token remains", () => {
-    expect(stripSilentToken("NO_REPLY")).toBe("");
-    expect(stripSilentToken("  NO_REPLY  ")).toBe("");
-  });
-
-  it("works with custom token", () => {
-    expect(stripSilentToken("done HEARTBEAT_OK", "HEARTBEAT_OK")).toBe("done");
   });
 });
 

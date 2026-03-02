@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import { normalizeAgentId } from "../../routing/session-key.js";
 import { parseAbsoluteTimeMs } from "../parse.js";
 import { computeNextRunAtMs } from "../schedule.js";
 import {
@@ -92,25 +91,6 @@ export function assertSupportedJobSpec(job: Pick<CronJob, "sessionTarget" | "pay
   }
 }
 
-function assertMainSessionAgentId(
-  job: Pick<CronJob, "sessionTarget" | "agentId">,
-  defaultAgentId: string | undefined,
-) {
-  if (job.sessionTarget !== "main") {
-    return;
-  }
-  if (!job.agentId) {
-    return;
-  }
-  const normalized = normalizeAgentId(job.agentId);
-  const normalizedDefault = normalizeAgentId(defaultAgentId);
-  if (normalized !== normalizedDefault) {
-    throw new Error(
-      `cron: sessionTarget "main" is only valid for the default agent. Use sessionTarget "isolated" with payload.kind "agentTurn" for non-default agents (agentId: ${job.agentId})`,
-    );
-  }
-}
-
 const TELEGRAM_TME_URL_REGEX = /^https?:\/\/t\.me\/|t\.me\//i;
 const TELEGRAM_SLASH_TOPIC_REGEX = /^-?\d+\/\d+$/;
 
@@ -181,6 +161,10 @@ export function computeJobNextRunAtMs(job: CronJob, nowMs: number): number | und
     return isFiniteTimestamp(next) ? next : undefined;
   }
   if (job.schedule.kind === "at") {
+    // One-shot jobs stay due until they successfully finish.
+    if (job.state.lastStatus === "ok" && job.state.lastRunAtMs) {
+      return undefined;
+    }
     // Handle both canonical `at` (string) and legacy `atMs` (number) fields.
     // The store migration should convert atMs→at, but be defensive in case
     // the migration hasn't run yet or was bypassed.
@@ -193,14 +177,6 @@ export function computeJobNextRunAtMs(job: CronJob, nowMs: number): number | und
           : typeof schedule.at === "string"
             ? parseAbsoluteTimeMs(schedule.at)
             : null;
-    // One-shot jobs stay due until they successfully finish, but if the
-    // schedule was updated to a time after the last run, re-arm the job.
-    if (job.state.lastStatus === "ok" && job.state.lastRunAtMs) {
-      if (atMs !== null && Number.isFinite(atMs) && atMs > job.state.lastRunAtMs) {
-        return atMs;
-      }
-      return undefined;
-    }
     return atMs !== null && Number.isFinite(atMs) ? atMs : undefined;
   }
   const next = computeStaggeredCronNextRunAtMs(job, nowMs);
@@ -450,17 +426,12 @@ export function createJob(state: CronServiceState, input: CronJobCreate): CronJo
     },
   };
   assertSupportedJobSpec(job);
-  assertMainSessionAgentId(job, state.deps.defaultAgentId);
   assertDeliverySupport(job);
   job.state.nextRunAtMs = computeJobNextRunAtMs(job, now);
   return job;
 }
 
-export function applyJobPatch(
-  job: CronJob,
-  patch: CronJobPatch,
-  opts?: { defaultAgentId?: string },
-) {
+export function applyJobPatch(job: CronJob, patch: CronJobPatch) {
   if ("name" in patch) {
     job.name = normalizeRequiredName(patch.name);
   }
@@ -530,7 +501,6 @@ export function applyJobPatch(
     job.sessionKey = normalizeOptionalSessionKey((patch as { sessionKey?: unknown }).sessionKey);
   }
   assertSupportedJobSpec(job);
-  assertMainSessionAgentId(job, opts?.defaultAgentId);
   assertDeliverySupport(job);
 }
 

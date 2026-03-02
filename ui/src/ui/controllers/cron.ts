@@ -624,9 +624,7 @@ export async function addCronJob(state: CronState) {
             to: form.deliveryTo.trim() || undefined,
             bestEffort: form.deliveryBestEffort,
           }
-        : selectedDeliveryMode === "none"
-          ? ({ mode: "none" } as const)
-          : undefined;
+        : undefined;
     const failureAlert = buildFailureAlert(form);
     const agentId = form.clearAgent ? null : form.agentId.trim();
     const job = {

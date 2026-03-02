@@ -12,7 +12,6 @@ import { resolveConfiguredModelRef } from "../model-selection.js";
 import { ensureOpenClawModelsJson } from "../models-config.js";
 import { discoverAuthStorage, discoverModels } from "../pi-model-discovery.js";
 import {
-  createSandboxBridgeReadFile,
   resolveSandboxedBridgeMediaPath,
   type SandboxedBridgeMediaPathConfig,
 } from "../sandbox-media-paths.js";
@@ -497,7 +496,8 @@ export function createImageTool(options?: {
             ? await loadWebMedia(resolvedPath ?? resolvedImage, {
                 maxBytes,
                 sandboxValidated: true,
-                readFile: createSandboxBridgeReadFile({ sandbox: sandboxConfig }),
+                readFile: (filePath) =>
+                  sandboxConfig.bridge.readFile({ filePath, cwd: sandboxConfig.root }),
               })
             : await loadWebMedia(resolvedPath ?? resolvedImage, {
                 maxBytes,

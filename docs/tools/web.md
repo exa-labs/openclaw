@@ -1,5 +1,5 @@
 ---
-summary: "Web search + fetch tools (Brave Search API, Perplexity direct/OpenRouter, Gemini Google Search grounding)"
+summary: "Web search + fetch tools (Brave Search API, Perplexity direct/OpenRouter, Gemini Google Search grounding, Exa search)"
 read_when:
   - You want to enable web_search or web_fetch
   - You need Brave Search API key setup
@@ -12,7 +12,7 @@ title: "Web Tools"
 
 OpenClaw ships two lightweight web tools:
 
-- `web_search` — Search the web via Brave Search API (default), Perplexity Sonar, or Gemini with Google Search grounding.
+- `web_search` — Search the web via Brave Search API (default), Perplexity Sonar, Gemini with Google Search grounding, or Exa search.
 - `web_fetch` — HTTP fetch + readable extraction (HTML → markdown/text).
 
 These are **not** browser automation. For JS-heavy sites or logins, use the
@@ -24,6 +24,7 @@ These are **not** browser automation. For JS-heavy sites or logins, use the
   - **Brave** (default): returns structured results (title, URL, snippet).
   - **Perplexity**: returns AI-synthesized answers with citations from real-time web search.
   - **Gemini**: returns AI-synthesized answers grounded in Google Search with citations.
+  - **Exa**: returns structured results with text snippets from web search.
 - Results are cached by query for 15 minutes (configurable).
 - `web_fetch` does a plain HTTP GET and extracts readable content
   (HTML → markdown/text). It does **not** execute JavaScript.
@@ -36,6 +37,7 @@ These are **not** browser automation. For JS-heavy sites or logins, use the
 | **Brave** (default) | Fast, structured results, free tier          | Traditional search results               | `BRAVE_API_KEY`                              |
 | **Perplexity**      | AI-synthesized answers, citations, real-time | Requires Perplexity or OpenRouter access | `OPENROUTER_API_KEY` or `PERPLEXITY_API_KEY` |
 | **Gemini**          | Google Search grounding, AI-synthesized      | Requires Gemini API key                  | `GEMINI_API_KEY`                             |
+| **Exa**             | Semantic search, text highlights             | Requires Exa API key                     | `EXA_API_KEY`                                |
 
 See [Brave Search setup](/brave-search) and [Perplexity Sonar](/perplexity) for provider-specific details.
 
@@ -47,6 +49,7 @@ If no `provider` is explicitly set, OpenClaw auto-detects which provider to use 
 2. **Gemini** — `GEMINI_API_KEY` env var or `search.gemini.apiKey` config
 3. **Perplexity** — `PERPLEXITY_API_KEY` / `OPENROUTER_API_KEY` env var or `search.perplexity.apiKey` config
 4. **Grok** — `XAI_API_KEY` env var or `search.grok.apiKey` config
+5. **Exa** — `EXA_API_KEY` env var or `search.exa.apiKey` config
 
 If no keys are found, it falls back to Brave (you'll get a missing-key error prompting you to configure one).
 
@@ -59,7 +62,7 @@ Set the provider in config:
   tools: {
     web: {
       search: {
-        provider: "brave", // or "perplexity" or "gemini"
+        provider: "brave", // or "perplexity", "gemini", "exa"
       },
     },
   },
@@ -155,6 +158,48 @@ If no base URL is set, OpenClaw chooses a default based on the API key source:
 | `perplexity/sonar-pro` (default) | Multi-step reasoning with web search | Complex questions |
 | `perplexity/sonar-reasoning-pro` | Chain-of-thought analysis            | Deep research     |
 
+## Using Exa
+
+Exa provides web search that understands meaning, not just keywords.
+It returns structured results with titles, URLs, and text content snippets.
+
+### Getting an Exa API key
+
+1. Get an API key at [dashboard.exa.ai](https://dashboard.exa.ai)
+2. Set `EXA_API_KEY` in the Gateway environment, or configure `tools.web.search.exa.apiKey`
+
+### Setting up Exa search
+
+```json5
+{
+  tools: {
+    web: {
+      search: {
+        provider: "exa",
+        exa: {
+          // API key (optional if EXA_API_KEY is set)
+          apiKey: "exa-...",
+          // Number of results to return (default: 5)
+          numResults: 5,
+          // Max characters for highlights text content (default: 8000)
+          highlightsMaxChars: 8000,
+        },
+      },
+    },
+  },
+}
+```
+
+**Environment alternative:** set `EXA_API_KEY` in the Gateway environment.
+For a gateway install, put it in `~/.openclaw/.env`.
+
+### Notes
+
+- Exa uses `type: "auto"` which automatically chooses the best search strategy.
+- Search results include title, URL, text snippet, published date, and author when available.
+- Returns `numResults` results (default: 5) with highlights and text content.
+- Text content is capped at `highlightsMaxChars` characters (default: 8000).
+
 ## Using Gemini (Google Search grounding)
 
 Gemini models support built-in [Google Search grounding](https://ai.google.dev/gemini-api/docs/grounding),
@@ -194,7 +239,7 @@ For a gateway install, put it in `~/.openclaw/.env`.
 - Citation URLs from Gemini grounding are automatically resolved from Google's
   redirect URLs to direct URLs.
 - Redirect resolution uses the SSRF guard path (HEAD + redirect checks + http/https validation) before returning the final citation URL.
-- Redirect resolution uses strict SSRF defaults, so redirects to private/internal targets are blocked.
+- This redirect resolver follows the trusted-network model (private/internal networks allowed by default) to match Gateway operator trust assumptions.
 - The default model (`gemini-2.5-flash`) is fast and cost-effective.
   Any Gemini model that supports grounding can be used.
 

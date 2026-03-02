@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendMediaFeishuMock = vi.hoisted(() => vi.fn());
 const sendMessageFeishuMock = vi.hoisted(() => vi.fn());
-const sendMarkdownCardFeishuMock = vi.hoisted(() => vi.fn());
 
 vi.mock("./media.js", () => ({
   sendMediaFeishu: sendMediaFeishuMock,
@@ -13,7 +12,6 @@ vi.mock("./media.js", () => ({
 
 vi.mock("./send.js", () => ({
   sendMessageFeishu: sendMessageFeishuMock,
-  sendMarkdownCardFeishu: sendMarkdownCardFeishuMock,
 }));
 
 vi.mock("./runtime.js", () => ({
@@ -33,7 +31,6 @@ describe("feishuOutbound.sendText local-image auto-convert", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sendMessageFeishuMock.mockResolvedValue({ messageId: "text_msg" });
-    sendMarkdownCardFeishuMock.mockResolvedValue({ messageId: "card_msg" });
     sendMediaFeishuMock.mockResolvedValue({ messageId: "media_msg" });
   });
 
@@ -110,72 +107,5 @@ describe("feishuOutbound.sendText local-image auto-convert", () => {
     } finally {
       await fs.rm(dir, { recursive: true, force: true });
     }
-  });
-
-  it("uses markdown cards when renderMode=card", async () => {
-    const result = await sendText({
-      cfg: {
-        channels: {
-          feishu: {
-            renderMode: "card",
-          },
-        },
-      } as any,
-      to: "chat_1",
-      text: "| a | b |\n| - | - |",
-      accountId: "main",
-    });
-
-    expect(sendMarkdownCardFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        text: "| a | b |\n| - | - |",
-        accountId: "main",
-      }),
-    );
-    expect(sendMessageFeishuMock).not.toHaveBeenCalled();
-    expect(result).toEqual(expect.objectContaining({ channel: "feishu", messageId: "card_msg" }));
-  });
-});
-
-describe("feishuOutbound.sendMedia renderMode", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    sendMessageFeishuMock.mockResolvedValue({ messageId: "text_msg" });
-    sendMarkdownCardFeishuMock.mockResolvedValue({ messageId: "card_msg" });
-    sendMediaFeishuMock.mockResolvedValue({ messageId: "media_msg" });
-  });
-
-  it("uses markdown cards for captions when renderMode=card", async () => {
-    const result = await feishuOutbound.sendMedia?.({
-      cfg: {
-        channels: {
-          feishu: {
-            renderMode: "card",
-          },
-        },
-      } as any,
-      to: "chat_1",
-      text: "| a | b |\n| - | - |",
-      mediaUrl: "https://example.com/image.png",
-      accountId: "main",
-    });
-
-    expect(sendMarkdownCardFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        text: "| a | b |\n| - | - |",
-        accountId: "main",
-      }),
-    );
-    expect(sendMediaFeishuMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        to: "chat_1",
-        mediaUrl: "https://example.com/image.png",
-        accountId: "main",
-      }),
-    );
-    expect(sendMessageFeishuMock).not.toHaveBeenCalled();
-    expect(result).toEqual(expect.objectContaining({ channel: "feishu", messageId: "media_msg" }));
   });
 });

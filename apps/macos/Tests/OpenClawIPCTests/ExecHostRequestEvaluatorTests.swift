@@ -4,20 +4,11 @@ import Testing
 
 struct ExecHostRequestEvaluatorTests {
     @Test func validateRequestRejectsEmptyCommand() {
-        let request = ExecHostRequest(
-            command: [],
-            rawCommand: nil,
-            cwd: nil,
-            env: nil,
-            timeoutMs: nil,
-            needsScreenRecording: nil,
-            agentId: nil,
-            sessionKey: nil,
-            approvalDecision: nil)
+        let request = ExecHostRequest(command: [], rawCommand: nil, cwd: nil, env: nil, timeoutMs: nil, needsScreenRecording: nil, agentId: nil, sessionKey: nil, approvalDecision: nil)
         switch ExecHostRequestEvaluator.validateRequest(request) {
         case .success:
             Issue.record("expected invalid request")
-        case let .failure(error):
+        case .failure(let error):
             #expect(error.code == "INVALID_REQUEST")
             #expect(error.message == "command required")
         }
@@ -31,7 +22,7 @@ struct ExecHostRequestEvaluatorTests {
             break
         case .allow:
             Issue.record("expected prompt requirement")
-        case let .deny(error):
+        case .deny(let error):
             Issue.record("unexpected deny: \(error.message)")
         }
     }
@@ -40,11 +31,11 @@ struct ExecHostRequestEvaluatorTests {
         let context = Self.makeContext(security: .allowlist, ask: .onMiss, allowlistSatisfied: false, skillAllow: false)
         let decision = ExecHostRequestEvaluator.evaluate(context: context, approvalDecision: .allowOnce)
         switch decision {
-        case let .allow(approvedByAsk):
+        case .allow(let approvedByAsk):
             #expect(approvedByAsk)
         case .requiresPrompt:
             Issue.record("expected allow decision")
-        case let .deny(error):
+        case .deny(let error):
             Issue.record("unexpected deny: \(error.message)")
         }
     }
@@ -53,7 +44,7 @@ struct ExecHostRequestEvaluatorTests {
         let context = Self.makeContext(security: .full, ask: .off, allowlistSatisfied: true, skillAllow: false)
         let decision = ExecHostRequestEvaluator.evaluate(context: context, approvalDecision: .deny)
         switch decision {
-        case let .deny(error):
+        case .deny(let error):
             #expect(error.reason == "user-denied")
         case .requiresPrompt:
             Issue.record("expected deny decision")

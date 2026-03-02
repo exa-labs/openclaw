@@ -8,7 +8,6 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    ENABLE_APP_INTENTS_METADATA_GENERATION: NO
 
 packages:
   OpenClawKit:
@@ -81,11 +80,9 @@ targets:
         DEVELOPMENT_TEAM: "$(OPENCLAW_DEVELOPMENT_TEAM)"
         PRODUCT_BUNDLE_IDENTIFIER: "$(OPENCLAW_APP_BUNDLE_ID)"
         PROVISIONING_PROFILE_SPECIFIER: "$(OPENCLAW_APP_PROFILE)"
-        TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
         ENABLE_APPINTENTS_METADATA: NO
-        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
     info:
       path: Sources/Info.plist
       properties:
@@ -143,7 +140,6 @@ targets:
         CODE_SIGN_STYLE: "$(OPENCLAW_CODE_SIGN_STYLE)"
         DEVELOPMENT_TEAM: "$(OPENCLAW_DEVELOPMENT_TEAM)"
         ENABLE_APPINTENTS_METADATA: NO
-        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
         PRODUCT_BUNDLE_IDENTIFIER: "$(OPENCLAW_SHARE_BUNDLE_ID)"
         PROVISIONING_PROFILE_SPECIFIER: "$(OPENCLAW_SHARE_PROFILE)"
         SWIFT_VERSION: "6.0"
@@ -178,7 +174,6 @@ targets:
     settings:
       base:
         ENABLE_APPINTENTS_METADATA: NO
-        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
         PRODUCT_BUNDLE_IDENTIFIER: "$(OPENCLAW_WATCH_APP_BUNDLE_ID)"
     info:
       path: WatchApp/Info.plist
@@ -196,7 +191,6 @@ targets:
     sources:
       - path: WatchExtension/Sources
     dependencies:
-      - sdk: AppIntents.framework
       - sdk: WatchConnectivity.framework
       - sdk: UserNotifications.framework
     configFiles:
@@ -235,7 +229,6 @@ targets:
         CODE_SIGN_STYLE: "$(OPENCLAW_CODE_SIGN_STYLE)"
         DEVELOPMENT_TEAM: "$(OPENCLAW_DEVELOPMENT_TEAM)"
         PRODUCT_BUNDLE_IDENTIFIER: ai.openclaw.ios.tests
-        ENABLE_APP_INTENTS_METADATA_GENERATION: NO
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/OpenClaw.app/OpenClaw"
