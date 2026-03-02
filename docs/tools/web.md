@@ -149,7 +149,7 @@ It returns structured results with titles, URLs, and text content snippets.
 **Environment alternative:** set `EXA_API_KEY` in the Gateway environment.
 For a gateway install, put it in `~/.openclaw/.env`.
 
-### Notes
+### Exa notes
 
 - Exa uses `type: "auto"` which automatically chooses the best search strategy.
 - Search results include title, URL, text snippet, published date, and author when available.
@@ -190,7 +190,7 @@ which returns AI-synthesized answers backed by live Google Search results with c
 **Environment alternative:** set `GEMINI_API_KEY` in the Gateway environment.
 For a gateway install, put it in `~/.openclaw/.env`.
 
-### Gemini notes
+### Notes
 
 - Citation URLs from Gemini grounding are automatically resolved from Google's
   redirect URLs to direct URLs.
