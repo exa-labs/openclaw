@@ -1273,7 +1273,7 @@ async function runExaSearch(params: {
           url, // Keep raw for tool chaining
           description: description ? wrapWebContent(description, "web_search") : "",
           published: entry.publishedDate || undefined,
-          author: entry.author || undefined,
+          author: entry.author ? wrapWebContent(entry.author, "web_search") : undefined,
           siteName: rawSiteName || undefined,
         };
       });
@@ -1607,8 +1607,8 @@ export function createWebSearchTool(options?: {
       const query = readStringParam(params, "query", { required: true });
       const count =
         readNumberParam(params, "count", { integer: true }) ??
-        search?.maxResults ??
-        (provider === "exa" ? resolveExaNumResults(exaConfig) : undefined);
+        (provider === "exa" ? resolveExaNumResults(exaConfig) : undefined) ??
+        search?.maxResults;
       const country = readStringParam(params, "country");
       if (country && provider !== "brave" && provider !== "perplexity") {
         return jsonResult({

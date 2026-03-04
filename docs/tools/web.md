@@ -30,14 +30,14 @@ See [Perplexity Search setup](/perplexity) and [Brave Search setup](/brave-searc
 
 ## Choosing a search provider
 
-| Provider                  | Pros                                                                                          | Cons                                        | API Key                                      |
-| ------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------- | -------------------------------------------- |
-| **Perplexity Search API** | Fast, structured results; domain, language, region, and freshness filters; content extraction | —                                           | `PERPLEXITY_API_KEY`                         |
-| **Brave Search API**      | Fast, structured results                                                                      | Fewer filtering options; AI-use terms apply | `BRAVE_API_KEY`                              |
-| **Gemini**                | Google Search grounding, AI-synthesized                                                       | Requires Gemini API key                     | `GEMINI_API_KEY`                             |
-| **Grok**                  | xAI web-grounded responses                                                                    | Requires xAI API key                        | `XAI_API_KEY`                                |
-| **Kimi**                  | Moonshot web search capability                                                                | Requires Moonshot API key                   | `KIMI_API_KEY` / `MOONSHOT_API_KEY`          |
-| **Exa**                   | Semantic search, text highlights                                                              | Requires Exa API key                        | `EXA_API_KEY`                                |
+| Provider                  | Pros                                                                                          | Cons                                        | API Key                             |
+| ------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------- | ----------------------------------- |
+| **Perplexity Search API** | Fast, structured results; domain, language, region, and freshness filters; content extraction | —                                           | `PERPLEXITY_API_KEY`                |
+| **Brave Search API**      | Fast, structured results                                                                      | Fewer filtering options; AI-use terms apply | `BRAVE_API_KEY`                     |
+| **Gemini**                | Google Search grounding, AI-synthesized                                                       | Requires Gemini API key                     | `GEMINI_API_KEY`                    |
+| **Grok**                  | xAI web-grounded responses                                                                    | Requires xAI API key                        | `XAI_API_KEY`                       |
+| **Kimi**                  | Moonshot web search capability                                                                | Requires Moonshot API key                   | `KIMI_API_KEY` / `MOONSHOT_API_KEY` |
+| **Exa**                   | Semantic search, text highlights                                                              | —                                           | `EXA_API_KEY`                       |
 
 ### Auto-detection
 
@@ -48,7 +48,8 @@ If no `provider` is explicitly set, OpenClaw auto-detects which provider to use 
 3. **Kimi** — `KIMI_API_KEY` / `MOONSHOT_API_KEY` env var or `tools.web.search.kimi.apiKey` config
 4. **Perplexity** — `PERPLEXITY_API_KEY` env var or `tools.web.search.perplexity.apiKey` config
 5. **Grok** — `XAI_API_KEY` env var or `tools.web.search.grok.apiKey` config
-6. **Exa** — `EXA_API_KEY` env var or `tools.web.search.exa.apiKey` config
+
+Exa requires explicit configuration (`provider: "exa"`) and is not auto-detected.
 
 If no keys are found, it falls back to Brave (you'll get a missing-key error prompting you to configure one).
 
