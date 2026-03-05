@@ -1240,7 +1240,7 @@ async function runExaSearch(params: {
     numResults: params.numResults,
     type: "auto",
     contents: {
-      highlights: { maxCharacters: params.highlightsMaxChars, query: params.query },
+      highlights: { maxCharacters: params.highlightsMaxChars },
     },
   };
 
