@@ -176,7 +176,7 @@ export function createExaWebSearchProvider(): WebSearchProviderPlugin {
     placeholder: "exa-...",
     signupUrl: "https://exa.ai/",
     docsUrl: "https://docs.exa.ai/",
-    autoDetectOrder: 5,
+    autoDetectOrder: 65,
     credentialPath: "plugins.entries.exa.config.webSearch.apiKey",
     inactiveSecretPaths: ["plugins.entries.exa.config.webSearch.apiKey"],
     getCredentialValue: (searchConfig) => searchConfig?.apiKey,
