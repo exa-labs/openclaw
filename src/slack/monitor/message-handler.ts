@@ -3,6 +3,7 @@ import {
   createInboundDebouncer,
   resolveInboundDebounceMs,
 } from "../../auto-reply/inbound-debounce.js";
+import { logVerbose } from "../../globals.js";
 import type { ResolvedSlackAccount } from "../accounts.js";
 import type { SlackMessageEvent } from "../types.js";
 import { stripSlackMentionsForCommandDetection } from "./commands.js";
@@ -25,6 +26,10 @@ export function createSlackMessageHandler(params: {
   const { ctx, account, trackEvent } = params;
   const debounceMs = resolveInboundDebounceMs({ cfg: ctx.cfg, channel: "slack" });
   const threadTsResolver = createSlackThreadTsResolver({ client: ctx.app.client });
+
+  /** Tracks muted threads. Key: "channel:threadTs". When muted, the bot ignores
+   *  messages in that thread unless explicitly @mentioned. */
+  const mutedThreads = new Set<string>();
 
   const debouncer = createInboundDebouncer<{
     message: SlackMessageEvent;
@@ -117,10 +122,50 @@ export function createSlackMessageHandler(params: {
     }
     trackEvent?.();
     // Skip messages that start with "aside" (case-insensitive, after stripping mentions).
-    const textForAsideCheck = stripSlackMentionsForCommandDetection(message.text ?? "");
-    if (/^aside\b/i.test(textForAsideCheck)) {
+    const strippedText = stripSlackMentionsForCommandDetection(message.text ?? "");
+    if (/^aside\b/i.test(strippedText)) {
       return;
     }
+
+    // Mute / unmute: thread-scoped commands that silence the bot unless @mentioned.
+    const threadTs = message.thread_ts ?? message.ts;
+    const muteKey = threadTs ? `${message.channel}:${threadTs}` : undefined;
+
+    if (muteKey && /^mute\b/i.test(strippedText)) {
+      mutedThreads.add(muteKey);
+      logVerbose(`slack: muted thread ${muteKey}`);
+      ctx.app.client.chat
+        .postMessage({
+          channel: message.channel,
+          thread_ts: threadTs,
+          text: "\ud83d\udd07 Muted. Tag me to resume, or say *unmute*.",
+        })
+        .catch((err) => {
+          logVerbose(`slack: failed posting mute ack: ${String(err)}`);
+        });
+      return;
+    }
+
+    if (muteKey && /^unmute\b/i.test(strippedText)) {
+      mutedThreads.delete(muteKey);
+      logVerbose(`slack: unmuted thread ${muteKey}`);
+      ctx.app.client.chat
+        .postMessage({
+          channel: message.channel,
+          thread_ts: threadTs,
+          text: "\ud83d\udd0a Unmuted.",
+        })
+        .catch((err) => {
+          logVerbose(`slack: failed posting unmute ack: ${String(err)}`);
+        });
+      return;
+    }
+
+    // If thread is muted, only process messages where the bot was explicitly @mentioned.
+    if (muteKey && mutedThreads.has(muteKey) && opts.source !== "app_mention" && !opts.wasMentioned) {
+      return;
+    }
+
     const resolvedMessage = await threadTsResolver.resolve({ message, source: opts.source });
     await debouncer.enqueue({ message: resolvedMessage, opts });
   };
