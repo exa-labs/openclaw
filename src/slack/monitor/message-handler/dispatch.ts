@@ -82,6 +82,37 @@ export async function dispatchPreparedSlackMessage(prepared: PreparedSlackMessag
       }
     : undefined;
 
+  // Post a one-liner session link when a new thread session starts.
+  if (prepared.ctxPayload.IsFirstThreadTurn && message.thread_ts) {
+    const publicUrl = process.env.OPENCLAW_PUBLIC_URL?.replace(/\/+$/, "");
+    const sessionKey = prepared.ctxPayload.SessionKey;
+    if (publicUrl && sessionKey) {
+      const sessionLink = `${publicUrl}/?session=${encodeURIComponent(sessionKey)}`;
+      const text = `🔗 <${sessionLink}|Session>`;
+      const identityOverrides: Record<string, string> = {};
+      if (slackIdentity?.username) {
+        identityOverrides.username = slackIdentity.username;
+      }
+      if (slackIdentity?.iconUrl) {
+        identityOverrides.icon_url = slackIdentity.iconUrl;
+      } else if (slackIdentity?.iconEmoji) {
+        identityOverrides.icon_emoji = slackIdentity.iconEmoji;
+      }
+      ctx.app.client.chat
+        .postMessage({
+          channel: message.channel,
+          thread_ts: message.thread_ts,
+          text,
+          unfurl_links: false,
+          unfurl_media: false,
+          ...identityOverrides,
+        })
+        .catch((err) => {
+          logVerbose(`slack: failed posting session link: ${String(err)}`);
+        });
+    }
+  }
+
   if (prepared.isDirectMessage) {
     const sessionCfg = cfg.session;
     const storePath = resolveStorePath(sessionCfg?.store, {
