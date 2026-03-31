@@ -116,6 +116,11 @@ export function createSlackMessageHandler(params: {
       return;
     }
     trackEvent?.();
+    // Skip messages that start with "aside" (case-insensitive, after stripping mentions).
+    const textForAsideCheck = stripSlackMentionsForCommandDetection(message.text ?? "");
+    if (/^aside\b/i.test(textForAsideCheck)) {
+      return;
+    }
     const resolvedMessage = await threadTsResolver.resolve({ message, source: opts.source });
     await debouncer.enqueue({ message: resolvedMessage, opts });
   };
