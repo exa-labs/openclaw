@@ -89,6 +89,10 @@ export async function dispatchPreparedSlackMessage(prepared: PreparedSlackMessag
     if (publicUrl && sessionKey) {
       const sessionLink = `${publicUrl}/?session=${encodeURIComponent(sessionKey)}`;
       const text = `🔗 <${sessionLink}|Session>`;
+      const identityOverrides: Record<string, string> = {};
+      if (slackIdentity?.username) identityOverrides.username = slackIdentity.username;
+      if (slackIdentity?.iconUrl) identityOverrides.icon_url = slackIdentity.iconUrl;
+      else if (slackIdentity?.iconEmoji) identityOverrides.icon_emoji = slackIdentity.iconEmoji;
       ctx.app.client.chat
         .postMessage({
           channel: message.channel,
@@ -96,9 +100,7 @@ export async function dispatchPreparedSlackMessage(prepared: PreparedSlackMessag
           text,
           unfurl_links: false,
           unfurl_media: false,
-          ...(slackIdentity?.username ? { username: slackIdentity.username } : {}),
-          ...(slackIdentity?.iconUrl ? { icon_url: slackIdentity.iconUrl } : {}),
-          ...(slackIdentity?.iconEmoji ? { icon_emoji: slackIdentity.iconEmoji } : {}),
+          ...identityOverrides,
         })
         .catch((err) => {
           logVerbose(`slack: failed posting session link: ${String(err)}`);
